@@ -115,6 +115,7 @@ public class Link {
                     return;
                 }
 
+                // Retry
                 for (;;) {
                     LOGGER.log(Level.INFO, MessageFormat.format(
                             "{0} - Sending {1} message to {2}:{3} with message ID {4} - Attempt #{5}", config.getId(),

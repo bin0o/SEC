@@ -19,6 +19,10 @@ public class ConsensusMessage extends Message {
         super(senderId, type);
     }
 
+    public AppendMessage deserializeAppendMessage() {
+        return new Gson().fromJson(this.message, AppendMessage.class);
+    }
+
     public PrePrepareMessage deserializePrePrepareMessage() {
         return new Gson().fromJson(this.message, PrePrepareMessage.class);
     }

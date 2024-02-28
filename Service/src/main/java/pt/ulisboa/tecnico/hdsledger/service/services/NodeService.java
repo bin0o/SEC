@@ -10,12 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
-import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
-import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
-import pt.ulisboa.tecnico.hdsledger.communication.Link;
-import pt.ulisboa.tecnico.hdsledger.communication.Message;
-import pt.ulisboa.tecnico.hdsledger.communication.PrePrepareMessage;
-import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.*;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
@@ -353,6 +348,9 @@ public class NodeService implements UDPService {
 
                             switch (message.getType()) {
 
+                                case APPEND ->
+                                    startConsensus(((ConsensusMessage) message).deserializeAppendMessage().getValue());
+
                                 case PRE_PREPARE ->
                                     uponPrePrepare((ConsensusMessage) message);
 
@@ -387,6 +385,7 @@ public class NodeService implements UDPService {
                     e.printStackTrace();
                 }
             }).start();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
