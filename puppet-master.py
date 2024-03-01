@@ -32,8 +32,14 @@ with open(f"Service/src/main/resources/{server_config}") as f:
     for key in data:
         pid = os.fork()
         if pid == 0:
+            key_dir = f"Keys/Node{key['id']}"
+            os.chdir(key_dir)
+            os.system(f"{terminal} openssl genrsa -out server.key")
+            os.chdir(f"..")
+            os.system(f"{terminal} openssl rsa -pubout -in Node{key['id']}/server.key -out public{key['id']}.key")
+            os.chdir(f"..")
             os.system(
-                f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {server_config}' ; sleep 500\"")
+                f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {server_config} {key_dir}' ; sleep 500\"")
             sys.exit()
 
 signal.signal(signal.SIGINT, quit_handler)
