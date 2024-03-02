@@ -23,6 +23,10 @@ public class ConsensusMessage extends Message {
         return new Gson().fromJson(this.message, AppendMessage.class);
     }
 
+    public AppendReplyMessage deserializeAppendReplyMessage() {
+        return new Gson().fromJson(this.message, AppendReplyMessage.class);
+    }
+
     public PrePrepareMessage deserializePrePrepareMessage() {
         return new Gson().fromJson(this.message, PrePrepareMessage.class);
     }
