@@ -6,8 +6,10 @@ import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Scanner;
+import java.util.logging.Level;
 
 public class Client {
     private static final CustomLogger LOGGER = new CustomLogger(Client.class.getName());
@@ -29,6 +31,7 @@ public class Client {
         Link linkToNodes = new Link(currentNodeConfig, currentNodeConfig.getPort(), new ProcessConfig[]{leaderConfig},
                 ConsensusMessage.class);
 
+        ClientService clientService = new ClientService(currentNodeConfig, leaderConfig, linkToNodes);
 
         Scanner sc = new Scanner(System.in);
         String lol;
