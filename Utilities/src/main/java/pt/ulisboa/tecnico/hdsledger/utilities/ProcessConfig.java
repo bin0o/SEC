@@ -1,5 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.utilities;
 
+import java.security.PublicKey;
+
 public class ProcessConfig {
     public ProcessConfig() {}
 
@@ -10,6 +12,10 @@ public class ProcessConfig {
     private String id;
 
     private int port;
+
+    private PublicKey publicKey;
+
+    private boolean isClient;
 
     public boolean isLeader() {
         return isLeader;
@@ -27,5 +33,15 @@ public class ProcessConfig {
         return hostname;
     }
 
+    public PublicKey getPublicKey() {
+        return publicKey;
+    }
 
+    public void setPublicKey(PublicKey publicKey) {
+        this.publicKey = publicKey;
+    }
+
+    public boolean isClient() {
+        return isClient;
+    }
 }

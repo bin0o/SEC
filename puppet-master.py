@@ -8,6 +8,7 @@ import signal
 
 # Terminal Emulator used to spawn the processes
 terminal = "kitty"
+terminal_mac = "/Applications/kitty.app/Contents/MacOS/kitty"
 
 # Blockchain node configuration file name
 server_configs = [
@@ -26,20 +27,21 @@ def quit_handler(*args):
 os.system("mvn clean install")
 
 # Spawn blockchain nodes
-with open(f"Service/src/main/resources/{server_config}") as f:
+with open(f"Configs/{server_config}") as f:
     data = json.load(f)
     processes = list()
+    print(len(data))
     for key in data:
         pid = os.fork()
         if pid == 0:
             key_dir = f"Keys/Node{key['id']}"
             os.chdir(key_dir)
-            os.system(f"{terminal} openssl genrsa -out server.key")
+            os.system(f"openssl genrsa -out server.key")
             os.chdir(f"..")
-            os.system(f"{terminal} openssl rsa -pubout -in Node{key['id']}/server.key -out public{key['id']}.key")
+            os.system(f"openssl rsa -pubout -in Node{key['id']}/server.key -out public{key['id']}.key")
             os.chdir(f"..")
-            os.system(
-                f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {server_config} {key_dir}' ; sleep 500\"")
+            if not key['isClient']:
+                os.system(f"{terminal_mac} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {server_config} {key_dir}' ; sleep 500\"")
             sys.exit()
 
 signal.signal(signal.SIGINT, quit_handler)

@@ -10,9 +10,11 @@ public class Message implements Serializable {
     private int messageId;
     // Message type
     private Type type;
+    // Message Signature
+    private String signature;
 
     public enum Type {
-        APPEND, PRE_PREPARE, PREPARE, COMMIT, ACK, IGNORE;
+        APPEND, APPEND_REPLY, PRE_PREPARE, PREPARE, COMMIT, ACK, IGNORE;
     }
 
     public Message(String senderId, Type type) {
@@ -42,5 +44,13 @@ public class Message implements Serializable {
 
     public void setType(Type type) {
         this.type = type;
+    }
+
+    public String getSignature() {
+        return signature;
+    }
+
+    public void setSignature(String signature) {
+        this.signature = signature;
     }
 }

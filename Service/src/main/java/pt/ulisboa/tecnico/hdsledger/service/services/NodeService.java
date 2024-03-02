@@ -16,6 +16,7 @@ import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
+import pt.ulisboa.tecnico.hdsledger.utilities.UDPService;
 
 public class NodeService implements UDPService {
 
@@ -95,11 +96,11 @@ public class NodeService implements UDPService {
      *
      * @param inputValue Value to value agreed upon
      */
-    public void startConsensus(String value) {
+    public void startConsensus(String value, String clientId) {
 
         // Set initial consensus values
         int localConsensusInstance = this.consensusInstance.incrementAndGet();
-        InstanceInfo existingConsensus = this.instanceInfo.put(localConsensusInstance, new InstanceInfo(value));
+        InstanceInfo existingConsensus = this.instanceInfo.put(localConsensusInstance, new InstanceInfo(value, clientId));
 
         // If startConsensus was already called for a given round
         if (existingConsensus != null) {
@@ -157,7 +158,7 @@ public class NodeService implements UDPService {
             return;
 
         // Set instance value
-        this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value));
+        this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value, null));
 
         // Within an instance of the algorithm, each upon rule is triggered at most once
         // for any round r
@@ -207,7 +208,7 @@ public class NodeService implements UDPService {
         prepareMessages.addMessage(message);
 
         // Set instance values
-        this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value));
+        this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value, null));
         InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
         // Within an instance of the algorithm, each upon rule is triggered at most once
@@ -331,6 +332,20 @@ public class NodeService implements UDPService {
                     MessageFormat.format(
                             "{0} - Decided on Consensus Instance {1}, Round {2}, Successful? {3}",
                             config.getId(), consensusInstance, round, true));
+
+            if (this.config.isLeader() && this.instanceInfo.containsKey(consensusInstance)) {
+                InstanceInfo info = this.instanceInfo.get(consensusInstance);
+
+                LOGGER.log(Level.INFO,
+                        MessageFormat.format(
+                                "{0} - Replying to {1}",
+                                config.getId(), info.getClientId()));
+
+                // Reply to the guy who appended the block
+                ConsensusMessage serviceMessage = new ConsensusMessage(config.getId(), Message.Type.APPEND_REPLY);
+                serviceMessage.setMessage((new AppendReplyMessage(true, consensusInstance - 1)).toJson());
+                this.link.send(info.getClientId(), serviceMessage);
+            }
         }
     }
 
@@ -348,8 +363,10 @@ public class NodeService implements UDPService {
 
                             switch (message.getType()) {
 
-                                case APPEND ->
-                                    startConsensus(((ConsensusMessage) message).deserializeAppendMessage().getValue());
+                                case APPEND -> {
+                                    ConsensusMessage consensusMessage = ((ConsensusMessage) message);
+                                    startConsensus(consensusMessage.deserializeAppendMessage().getValue(), message.getSenderId());
+                                }
 
                                 case PRE_PREPARE ->
                                     uponPrePrepare((ConsensusMessage) message);

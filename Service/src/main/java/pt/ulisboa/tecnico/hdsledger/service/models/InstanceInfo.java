@@ -10,10 +10,22 @@ public class InstanceInfo {
     private String preparedValue;
     private CommitMessage commitMessage;
     private String inputValue;
+
+    private String clientId;
+
     private int committedRound = -1;
 
-    public InstanceInfo(String inputValue) {
+    public InstanceInfo(String inputValue, String clientId) {
         this.inputValue = inputValue;
+        this.clientId = clientId;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
     public int getCurrentRound() {

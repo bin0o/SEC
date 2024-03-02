@@ -24,6 +24,7 @@ public class Link {
     private final DatagramSocket socket;
     // Map of all nodes in the network
     private final Map<String, ProcessConfig> nodes = new ConcurrentHashMap<>();
+
     // Reference to the node itself
     private final ProcessConfig config;
     // Class to deserialize messages to
@@ -36,6 +37,8 @@ public class Link {
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     // Send messages to self by pushing to queue instead of through the network
     private final Queue<Message> localhostQueue = new ConcurrentLinkedQueue<>();
+
+    private final PrivateKey privateKey;
 
     public Link(ProcessConfig self, int port, ProcessConfig[] nodes, Class<? extends Message> messageClass) {
         this(self, port, nodes, messageClass, false, 200);
@@ -57,13 +60,35 @@ public class Link {
         try {
             this.socket = new DatagramSocket(port, InetAddress.getByName(config.getHostname()));
         } catch (UnknownHostException | SocketException e) {
+            LOGGER.log(Level.SEVERE, MessageFormat.format("Failed to open socket: {0}", e.getMessage()));
             throw new HDSSException(ErrorMessage.CannotOpenSocket);
         }
         if (!activateLogs) {
             LogManager.getLogManager().reset();
         }
+
+        // Setup private key
+        File file = new File( Global.KEYS_LOCATION + "/Node" + this.config.getId() + "/server.key");
+        try {
+            String key = Files.readString(file.toPath(), Charset.defaultCharset());
+            this.privateKey = CryptoUtils.parsePrivateKey(key);
+        } catch (IOException e){
+            throw new HDSSException(ErrorMessage.KeyParsingFailed);
+        }
     }
 
+    // Authenticated Link methods
+    private String authenticate(Message message, PrivateKey privateKey) {
+        message.setSignature(null);
+
+        return CryptoUtils.generateSignature(new Gson().toJson(message).getBytes(), privateKey);
+    }
+    private boolean verifyAuth(Message message, PublicKey publicKey) {
+        String signature = message.getSignature();
+        message.setSignature(null);
+
+        return CryptoUtils.verifySignature(new Gson().toJson(message).getBytes(), signature, publicKey);
+    }
     public void ackAll(List<Integer> messageIds) {
         receivedAcks.addAll(messageIds);
     }
@@ -75,7 +100,12 @@ public class Link {
      */
     public void broadcast(Message data) {
         Gson gson = new Gson();
-        nodes.forEach((destId, dest) -> send(destId, gson.fromJson(gson.toJson(data), data.getClass())));
+
+        nodes.forEach((destId, dest) -> {
+            // Clients dont receive broadcasted messages
+            if (!dest.isClient())
+                send(destId, gson.fromJson(gson.toJson(data), data.getClass()));
+        });
     }
 
     /*
@@ -106,6 +136,9 @@ public class Link {
 
                 // Send message to local queue instead of using network if destination in self
                 if (nodeId.equals(this.config.getId())) {
+                    // Generate Signature
+                    data.setSignature(this.authenticate(data, this.privateKey));
+
                     this.localhostQueue.add(data);
 
                     LOGGER.log(Level.INFO,
@@ -133,6 +166,8 @@ public class Link {
                     sleepTime <<= 1;
                 }
 
+                if (config.isClient() && data.getType() == Type.APPEND) return;
+
                 LOGGER.log(Level.INFO, MessageFormat.format("{0} - Message {1} sent to {2}:{3} successfully",
                         config.getId(), data.getType(), destAddress, destPort));
             } catch (InterruptedException | UnknownHostException e) {
@@ -153,6 +188,9 @@ public class Link {
      * @param data The message to be sent
      */
     public void unreliableSend(InetAddress hostname, int port, Message data) {
+        // Generate Signature
+        data.setSignature(this.authenticate(data, this.privateKey));
+
         new Thread(() -> {
             try {
                 byte[] buf = new Gson().toJson(data).getBytes();
@@ -175,7 +213,7 @@ public class Link {
         Boolean local = false;
         DatagramPacket response = null;
         
-        if (this.localhostQueue.size() > 0) {
+        if (!this.localhostQueue.isEmpty()) {
             message = this.localhostQueue.poll();
             local = true; 
             this.receivedAcks.add(message.getMessageId());
@@ -196,16 +234,27 @@ public class Link {
         if (!nodes.containsKey(senderId))
             throw new HDSSException(ErrorMessage.NoSuchNode);
 
+        // Retrieve public key
+        PublicKey publicKey = this.nodes.get(senderId).getPublicKey();
+
         // Handle ACKS, since it's possible to receive multiple acks from the same
         // message
         if (message.getType().equals(Message.Type.ACK)) {
+
+            if(!this.verifyAuth(message, publicKey))
+                throw new HDSSException(ErrorMessage.ValidationFailed);
+
             receivedAcks.add(messageId);
             return message;
         }
 
         // It's not an ACK -> Deserialize for the correct type
-        if (!local)
+        if (!local) {
             message = new Gson().fromJson(serialized, this.messageClass);
+        }
+
+        if(!this.verifyAuth(message, publicKey))
+            throw new HDSSException(ErrorMessage.ValidationFailed);
 
         boolean isRepeated = !receivedMessages.get(message.getSenderId()).add(messageId);
         Type originalType = message.getType();
