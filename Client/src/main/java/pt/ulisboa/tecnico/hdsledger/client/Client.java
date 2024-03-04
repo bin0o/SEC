@@ -1,8 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.client;
 
-import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
-import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 
@@ -17,21 +15,17 @@ public class Client {
     public static void main (String[] args) {
 
         String id = args[0];
-        String nodesConfigPath = Global.CONFIG_LOCATION + "/" + args[1];
+        String configPath = args[1];
 
-        ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
+        GlobalConfig config = GlobalConfig.fromFile(configPath, id);
 
-        ProcessConfig leaderConfig = Arrays.stream(nodeConfigs).filter(ProcessConfig::isLeader).findAny().get();
-        ProcessConfig currentNodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId().equals(id)).findAny().get();
 
-        if (!currentNodeConfig.isClient())
+        if (!config.getCurrentNodeConfig().isClient())
             throw new HDSSException(ErrorMessage.NodeIsNotAClient);
 
         // Abstraction to send and receive messages
-        Link linkToNodes = new Link(currentNodeConfig, currentNodeConfig.getPort(), new ProcessConfig[]{leaderConfig},
-                ConsensusMessage.class);
-
-        ClientService clientService = new ClientService(currentNodeConfig, leaderConfig, linkToNodes);
+        Link linkToNodes = new Link(config, ConsensusMessage.class);
+        ClientService clientService = new ClientService(config, linkToNodes);
 
         Scanner sc = new Scanner(System.in);
         String lol;

@@ -30,18 +30,21 @@ os.system("mvn clean install")
 with open(f"Configs/{server_config}") as f:
     data = json.load(f)
     processes = list()
-    print(len(data))
-    for key in data:
+    for key in data['nodes']:
         pid = os.fork()
         if pid == 0:
             key_dir = f"Keys/Node{key['id']}"
+            try:
+                os.makedirs(key_dir)
+            except Exception as e:
+                pass
             os.chdir(key_dir)
             os.system(f"openssl genrsa -out server.key")
             os.chdir(f"..")
             os.system(f"openssl rsa -pubout -in Node{key['id']}/server.key -out public{key['id']}.key")
             os.chdir(f"..")
             if not key['isClient']:
-                os.system(f"{terminal_mac} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {server_config} {key_dir}' ; sleep 500\"")
+                os.system(f"{terminal_mac} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} ../Configs/{server_config}' ; sleep 500\"")
             sys.exit()
 
 signal.signal(signal.SIGINT, quit_handler)

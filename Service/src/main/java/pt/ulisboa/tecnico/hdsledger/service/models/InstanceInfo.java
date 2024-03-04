@@ -11,13 +11,24 @@ public class InstanceInfo {
     private CommitMessage commitMessage;
     private String inputValue;
 
+    private Integer timer;
+
     private String clientId;
 
     private int committedRound = -1;
 
-    public InstanceInfo(String inputValue, String clientId) {
+    public Integer getTimer() {
+        return this.timer;
+    }
+
+    public void setTimer(Integer timer){
+        this.timer = timer;
+    }
+
+    public InstanceInfo(String inputValue, String clientId, int timer) {
         this.inputValue = inputValue;
         this.clientId = clientId;
+        this.timer = timer;
     }
 
     public String getClientId() {

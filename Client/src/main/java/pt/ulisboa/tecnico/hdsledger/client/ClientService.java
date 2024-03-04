@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.hdsledger.client;
 import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.*;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
+import pt.ulisboa.tecnico.hdsledger.utilities.GlobalConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 
 import java.io.IOException;
@@ -17,9 +18,9 @@ public class ClientService {
     private final Link link;
     private BlockingQueue<AppendReplyMessage> replyMessagesQueue = new LinkedBlockingQueue<>();
 
-    public ClientService(ProcessConfig clientConfig, ProcessConfig serverConfig, Link link) {
-        this.clientConfig = clientConfig;
-        this.serverConfig = serverConfig;
+    public ClientService(GlobalConfig config, Link link) {
+        this.clientConfig = config.getCurrentNodeConfig();
+        this.serverConfig = config.getCurrentLeaderConfig();
         this.link = link;
 
         // Initialize listener

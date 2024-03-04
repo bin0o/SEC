@@ -9,9 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.text.MessageFormat;
@@ -45,10 +43,19 @@ public class Link {
     // Send messages to self by pushing to queue instead of through the network
     private final Queue<Message> localhostQueue = new ConcurrentLinkedQueue<>();
 
-    private final PrivateKey privateKey;
+    private PrivateKey privateKey;
 
-    public Link(ProcessConfig self, int port, ProcessConfig[] nodes, Class<? extends Message> messageClass) {
-        this(self, port, nodes, messageClass, false, 200);
+    public Link(GlobalConfig config, Class<? extends Message> messageClass) {
+        this(config.getCurrentNodeConfig(), config.getCurrentNodeConfig().getPort(), config.getNodesConfigs(), messageClass, false, 200);
+
+        // Setup private key
+        File file = new File( config.getKeysLocation() + "/Node" + this.config.getId() + "/server.key");
+        try {
+            String key = Files.readString(file.toPath(), Charset.defaultCharset());
+            this.privateKey = CryptoUtils.parsePrivateKey(key);
+        } catch (IOException e){
+            throw new HDSSException(ErrorMessage.KeyParsingFailed);
+        }
     }
 
     public Link(ProcessConfig self, int port, ProcessConfig[] nodes, Class<? extends Message> messageClass,
@@ -72,15 +79,6 @@ public class Link {
         }
         if (!activateLogs) {
             LogManager.getLogManager().reset();
-        }
-
-        // Setup private key
-        File file = new File( Global.KEYS_LOCATION + "/Node" + this.config.getId() + "/server.key");
-        try {
-            String key = Files.readString(file.toPath(), Charset.defaultCharset());
-            this.privateKey = CryptoUtils.parsePrivateKey(key);
-        } catch (IOException e){
-            throw new HDSSException(ErrorMessage.KeyParsingFailed);
         }
     }
 
