@@ -24,7 +24,7 @@ public class Node {
                     config.getCurrentNodeConfig().getId(),
                     config.getCurrentNodeConfig().getHostname(),
                     config.getCurrentNodeConfig().getPort(),
-                    config.getCurrentNodeConfig().isLeader()));
+                    config.isLeader(config.getCurrentNodeConfig().getId(), 1, 1)));
 
             // Abstraction to send and receive messages
             Link linkToNodes = new Link(config, ConsensusMessage.class);

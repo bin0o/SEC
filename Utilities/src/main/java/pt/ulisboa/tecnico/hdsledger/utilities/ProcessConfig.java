@@ -5,8 +5,6 @@ import java.security.PublicKey;
 public class ProcessConfig {
     public ProcessConfig() {}
 
-    private boolean isLeader;
-
     private String hostname;
 
     private String id;
@@ -16,10 +14,6 @@ public class ProcessConfig {
     private PublicKey publicKey;
 
     private boolean isClient;
-
-    public boolean isLeader() {
-        return isLeader;
-    }
 
     public int getPort() {
         return port;

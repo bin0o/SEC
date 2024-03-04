@@ -7,14 +7,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
+import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.*;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
-import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
-import pt.ulisboa.tecnico.hdsledger.utilities.GlobalConfig;
-import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
-import pt.ulisboa.tecnico.hdsledger.utilities.UDPService;
+import pt.ulisboa.tecnico.hdsledger.utilities.*;
 
 public class NodeService implements UDPService {
 
@@ -65,15 +63,11 @@ public class NodeService implements UDPService {
     public ArrayList<String> getLedger() {
         return this.ledger;
     }
-
-    private boolean isLeader(String id) {
-        return this.config.getCurrentLeaderConfig().getId().equals(id);
-    }
  
     public ConsensusMessage createConsensusMessage(String value, int instance, int round) {
         PrePrepareMessage prePrepareMessage = new PrePrepareMessage(value);
 
-        ConsensusMessage consensusMessage = new ConsensusMessageBuilder(current.getId(), Message.Type.PRE_PREPARE)
+        ConsensusMessage consensusMessage = new ConsensusMessageBuilder(current.getId(), MessageType.PRE_PREPARE)
                 .setConsensusInstance(instance)
                 .setRound(round)
                 .setMessage(prePrepareMessage.toJson())
@@ -90,6 +84,8 @@ public class NodeService implements UDPService {
      * @param inputValue Value to value agreed upon
      */
     public void startConsensus(String value, String clientId) {
+
+
 
         // Set initial consensus values
         int localConsensusInstance = this.consensusInstance.incrementAndGet();
@@ -113,10 +109,14 @@ public class NodeService implements UDPService {
         }
 
         // Leader broadcasts PRE-PREPARE message
-        if (this.current.isLeader()) {
-            InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
+        InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
+
+        if (this.config.isLeader(config.getCurrentNodeConfig().getId(), localConsensusInstance, instance.getCurrentRound())) {
             LOGGER.log(Level.INFO,
                 MessageFormat.format("{0} - Node is leader, sending PRE-PREPARE message", current.getId()));
+
+            if (config.dropMessage(localConsensusInstance, MessageType.PRE_PREPARE)) return;
+
             this.link.broadcast(this.createConsensusMessage(value, localConsensusInstance, instance.getCurrentRound()));
         } else {
             LOGGER.log(Level.INFO,
@@ -147,7 +147,7 @@ public class NodeService implements UDPService {
                         current.getId(), senderId, consensusInstance, round));
 
         // Verify if pre-prepare was sent by leader
-        if (!isLeader(senderId))
+        if (!this.config.isLeader(senderId, consensusInstance, round))
             return;
 
         // Set instance value
@@ -166,13 +166,15 @@ public class NodeService implements UDPService {
 
         PrepareMessage prepareMessage = new PrepareMessage(prePrepareMessage.getValue());
 
-        ConsensusMessage consensusMessage = new ConsensusMessageBuilder(current.getId(), Message.Type.PREPARE)
+        ConsensusMessage consensusMessage = new ConsensusMessageBuilder(current.getId(), MessageType.PREPARE)
                 .setConsensusInstance(consensusInstance)
                 .setRound(round)
                 .setMessage(prepareMessage.toJson())
                 .setReplyTo(senderId)
                 .setReplyToMessageId(senderMessageId)
                 .build();
+
+        if (config.dropMessage(consensusInstance, MessageType.PREPARE)) return;
 
         this.link.broadcast(consensusMessage);
     }
@@ -215,13 +217,15 @@ public class NodeService implements UDPService {
                                     + "replying again to make sure it reaches the initial sender",
                             current.getId(), consensusInstance, round));
 
-            ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), Message.Type.COMMIT)
+            ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), MessageType.COMMIT)
                     .setConsensusInstance(consensusInstance)
                     .setRound(round)
                     .setReplyTo(senderId)
                     .setReplyToMessageId(message.getMessageId())
                     .setMessage(instance.getCommitMessage().toJson())
                     .build();
+
+            if (config.dropMessage(consensusInstance, MessageType.COMMIT)) return;
 
             link.send(senderId, m);
             return;
@@ -232,6 +236,7 @@ public class NodeService implements UDPService {
         if (preparedValue.isPresent() && instance.getPreparedRound() < round) {
             instance.setPreparedValue(preparedValue.get());
             instance.setPreparedRound(round);
+            instance.setPreparedJustificationMessage(message);
 
             // Must reply to prepare message senders
             Collection<ConsensusMessage> sendersMessage = prepareMessages.getMessages(consensusInstance, round)
@@ -241,13 +246,15 @@ public class NodeService implements UDPService {
             instance.setCommitMessage(c);
 
             sendersMessage.forEach(senderMessage -> {
-                ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), Message.Type.COMMIT)
+                ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), MessageType.COMMIT)
                         .setConsensusInstance(consensusInstance)
                         .setRound(round)
                         .setReplyTo(senderMessage.getSenderId())
                         .setReplyToMessageId(senderMessage.getMessageId())
                         .setMessage(c.toJson())
                         .build();
+
+                if (config.dropMessage(consensusInstance, MessageType.COMMIT)) return;
 
                 link.send(senderMessage.getSenderId(), m);
             });
@@ -261,6 +268,24 @@ public class NodeService implements UDPService {
 
     public void ibftInitiateRoundChange(int l) {
         LOGGER.log(Level.INFO, MessageFormat.format("{0} - Initiating new round: {1}", current.getId(), l));
+        InstanceInfo instance = instanceInfo.get(l);
+        ConsensusMessage justification;
+
+        if (instance.getPreparedRound() != -1) {
+            LOGGER.log(Level.INFO, MessageFormat.format("{0} - Prepared round initiated, computing justification", current.getId()));
+            // Set Justification
+            justification = instance.getPreparedJustificationMessage();
+        } else {
+            justification = null;
+        }
+
+        RoundChangeMessage roundChangeMessage = new RoundChangeMessage(justification, instance.getPreparedRound(), instance.getPreparedValue());
+        ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), MessageType.ROUND_CHANGE)
+                                    .setConsensusInstance(l)
+                                    .setRound(instance.getCurrentRound())
+                                    .setMessage(roundChangeMessage.toJson())
+                                    .build();
+        link.broadcast(m);
     }
 
     private void ibftTimer() {
@@ -331,6 +356,7 @@ public class NodeService implements UDPService {
         Optional<String> commitValue = commitMessages.hasValidCommitQuorum(current.getId(),
                 consensusInstance, round);
 
+        // Decide
         if (commitValue.isPresent() && instance.getCommittedRound() < round) {
 
             instance = this.instanceInfo.get(consensusInstance);
@@ -364,7 +390,7 @@ public class NodeService implements UDPService {
 
             this.instanceInfo.get(consensusInstance).setTimer(null);
 
-            if (this.current.isLeader() && this.instanceInfo.containsKey(consensusInstance)) {
+            if (this.config.isLeader(config.getCurrentNodeConfig().getId(), consensusInstance, round) && this.instanceInfo.containsKey(consensusInstance)) {
                 InstanceInfo info = this.instanceInfo.get(consensusInstance);
 
                 LOGGER.log(Level.INFO,
@@ -373,9 +399,38 @@ public class NodeService implements UDPService {
                                 current.getId(), info.getClientId()));
 
                 // Reply to the guy who appended the block
-                ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), Message.Type.APPEND_REPLY);
-                serviceMessage.setMessage((new AppendReplyMessage(true, consensusInstance - 1)).toJson());
+                ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
+                serviceMessage.setMessage((new DecideMessage(true, consensusInstance - 1)).toJson());
                 this.link.send(info.getClientId(), serviceMessage);
+            }
+        }
+    }
+
+    public synchronized void uponRoundChange(ConsensusMessage message) {
+        int round = message.getRound();
+        RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+
+        String preparedValue = roundChangeMessage.getPreparedValue();
+        int preparedRound = roundChangeMessage.getPreparedRound();
+        ConsensusMessage justification = roundChangeMessage.getJustification();
+
+        if (preparedRound != -1 && !(preparedRound < round)) {
+            LOGGER.log(Level.INFO,
+                    MessageFormat.format(
+                            "{0} - Prepared round {1} can't be higher that current round {2}, ignored",
+                            current.getId(), preparedRound, round));
+            return;
+        }
+
+        if ((preparedRound != -1) || (preparedValue != null)) {
+            if (preparedRound != justification.getRound() ||
+                    !Objects.equals(preparedValue, justification.getMessage()) ||
+                            justification.getType() != MessageType.ROUND_CHANGE) {
+                LOGGER.log(Level.INFO,"Bad round change justification, ignored");
+                return;
+            }
+            if (!link.verifyAuth(justification,config.getCurrentNodeConfig().getPublicKey())){
+
             }
         }
     }
@@ -396,24 +451,24 @@ public class NodeService implements UDPService {
 
                                 case APPEND -> {
                                     ConsensusMessage consensusMessage = ((ConsensusMessage) message);
-                                    startConsensus(consensusMessage.deserializeAppendMessage().getValue(), message.getSenderId());
+                                    startConsensus(consensusMessage.deserializeStartMessage().getValue(), message.getSenderId());
                                 }
 
                                 case PRE_PREPARE ->
                                     uponPrePrepare((ConsensusMessage) message);
 
-
                                 case PREPARE ->
                                     uponPrepare((ConsensusMessage) message);
-
 
                                 case COMMIT ->
                                     uponCommit((ConsensusMessage) message);
 
-
                                 case ACK ->
                                     LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received ACK message from {1}",
                                             current.getId(), message.getSenderId()));
+
+                                case ROUND_CHANGE ->
+                                    uponRoundChange((ConsensusMessage) message);
 
                                 case IGNORE ->
                                     LOGGER.log(Level.INFO,

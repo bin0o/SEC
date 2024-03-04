@@ -1,8 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
-
-import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 
 import java.io.File;
@@ -83,12 +81,11 @@ public class Link {
     }
 
     // Authenticated Link methods
-    private String authenticate(Message message, PrivateKey privateKey) {
+    public String authenticate(Message message) {
         message.setSignature(null);
-
-        return CryptoUtils.generateSignature(new Gson().toJson(message).getBytes(), privateKey);
+        return CryptoUtils.generateSignature(new Gson().toJson(message).getBytes(), this.privateKey);
     }
-    private boolean verifyAuth(Message message, PublicKey publicKey) {
+    public boolean verifyAuth(Message message, PublicKey publicKey) {
         String signature = message.getSignature();
         message.setSignature(null);
 
@@ -142,7 +139,7 @@ public class Link {
                 // Send message to local queue instead of using network if destination in self
                 if (nodeId.equals(this.config.getId())) {
                     // Generate Signature
-                    data.setSignature(this.authenticate(data, this.privateKey));
+                    data.setSignature(this.authenticate(data));
 
                     this.localhostQueue.add(data);
 
@@ -171,7 +168,7 @@ public class Link {
                     sleepTime <<= 1;
                 }
 
-                if (config.isClient() && data.getType() == Type.APPEND) return;
+                if (config.isClient() && data.getType() == MessageType.APPEND) return;
 
                 LOGGER.log(Level.INFO, MessageFormat.format("{0} - Message {1} sent to {2}:{3} successfully",
                         config.getId(), data.getType(), destAddress, destPort));
@@ -194,7 +191,7 @@ public class Link {
      */
     public void unreliableSend(InetAddress hostname, int port, Message data) {
         // Generate Signature
-        data.setSignature(this.authenticate(data, this.privateKey));
+        data.setSignature(this.authenticate(data));
 
         new Thread(() -> {
             try {
@@ -244,7 +241,7 @@ public class Link {
 
         // Handle ACKS, since it's possible to receive multiple acks from the same
         // message
-        if (message.getType().equals(Message.Type.ACK)) {
+        if (message.getType().equals(MessageType.ACK)) {
 
             if(!this.verifyAuth(message, publicKey))
                 throw new HDSSException(ErrorMessage.ValidationFailed);
@@ -262,10 +259,10 @@ public class Link {
             throw new HDSSException(ErrorMessage.ValidationFailed);
 
         boolean isRepeated = !receivedMessages.get(message.getSenderId()).add(messageId);
-        Type originalType = message.getType();
+        MessageType originalType = message.getType();
         // Message already received (add returns false if already exists) => Discard
         if (isRepeated) {
-            message.setType(Message.Type.IGNORE);
+            message.setType(MessageType.IGNORE);
         }
 
         switch (message.getType()) {
@@ -273,7 +270,7 @@ public class Link {
                 return message;
             }
             case IGNORE -> {
-                if (!originalType.equals(Type.COMMIT))
+                if (!originalType.equals(MessageType.COMMIT))
                     return message;
             }
             case PREPARE -> {
@@ -295,7 +292,7 @@ public class Link {
             InetAddress address = InetAddress.getByName(response.getAddress().getHostAddress());
             int port = response.getPort();
 
-            Message responseMessage = new Message(this.config.getId(), Message.Type.ACK);
+            Message responseMessage = new Message(this.config.getId(), MessageType.ACK);
             responseMessage.setMessageId(messageId);
 
             // ACK is sent without needing for another ACK because

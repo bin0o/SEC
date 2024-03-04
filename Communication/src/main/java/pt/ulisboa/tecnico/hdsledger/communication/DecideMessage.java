@@ -2,13 +2,13 @@ package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
 
-public class AppendReplyMessage {
+public class DecideMessage {
 
     private final boolean confirmation;
 
     private final int index;
 
-    public AppendReplyMessage(boolean confirmation, int index) {
+    public DecideMessage(boolean confirmation, int index) {
         this.confirmation = confirmation;
         this.index = index;
     }

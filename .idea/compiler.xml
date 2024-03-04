@@ -12,5 +12,8 @@
         <module name="Communication" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="Tests" target="17" />
+    </bytecodeTargetLevel>
   </component>
 </project>

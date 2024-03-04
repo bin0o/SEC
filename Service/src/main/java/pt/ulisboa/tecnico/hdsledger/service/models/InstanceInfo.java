@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 
 public class InstanceInfo {
 
@@ -13,9 +14,19 @@ public class InstanceInfo {
 
     private Integer timer;
 
+    private ConsensusMessage preparedJustificationMessage;
+
     private String clientId;
 
     private int committedRound = -1;
+
+    public ConsensusMessage getPreparedJustificationMessage(){
+        return this.preparedJustificationMessage;
+    }
+
+    public void setPreparedJustificationMessage(ConsensusMessage msg){
+        this.preparedJustificationMessage = msg;
+    }
 
     public Integer getTimer() {
         return this.timer;
@@ -25,7 +36,7 @@ public class InstanceInfo {
         this.timer = timer;
     }
 
-    public InstanceInfo(String inputValue, String clientId, int timer) {
+    public InstanceInfo(String inputValue, String clientId, Integer timer) {
         this.inputValue = inputValue;
         this.clientId = clientId;
         this.timer = timer;

@@ -1,5 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
+import pt.ulisboa.tecnico.hdsledger.utilities.MessageType;
+
 import java.io.Serializable;
 
 public class Message implements Serializable {
@@ -9,15 +11,11 @@ public class Message implements Serializable {
     // Message identifier
     private int messageId;
     // Message type
-    private Type type;
+    private MessageType type;
     // Message Signature
     private String signature;
 
-    public enum Type {
-        APPEND, APPEND_REPLY, PRE_PREPARE, PREPARE, COMMIT, ACK, IGNORE;
-    }
-
-    public Message(String senderId, Type type) {
+    public Message(String senderId, MessageType type) {
         this.senderId = senderId;
         this.type = type;
     }
@@ -38,11 +36,11 @@ public class Message implements Serializable {
         this.messageId = messageId;
     }
 
-    public Type getType() {
+    public MessageType getType() {
         return type;
     }
 
-    public void setType(Type type) {
+    public void setType(MessageType type) {
         this.type = type;
     }
 

@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
+import pt.ulisboa.tecnico.hdsledger.utilities.MessageType;
 
 public class ConsensusMessage extends Message {
 
@@ -15,16 +16,19 @@ public class ConsensusMessage extends Message {
     // Message (PREPREPARE, PREPARE, COMMIT)
     private String message;
 
-    public ConsensusMessage(String senderId, Type type) {
+    public ConsensusMessage(String senderId, MessageType type) {
         super(senderId, type);
     }
-
-    public AppendMessage deserializeAppendMessage() {
+    public AppendMessage deserializeStartMessage() {
         return new Gson().fromJson(this.message, AppendMessage.class);
     }
 
-    public AppendReplyMessage deserializeAppendReplyMessage() {
-        return new Gson().fromJson(this.message, AppendReplyMessage.class);
+    public DecideMessage deserializeDecideMessage() {
+        return new Gson().fromJson(this.message, DecideMessage.class);
+    }
+
+    public RoundChangeMessage deserializeRoundChangeMessage()  {
+        return new Gson().fromJson(this.message, RoundChangeMessage.class);
     }
 
     public PrePrepareMessage deserializePrePrepareMessage() {

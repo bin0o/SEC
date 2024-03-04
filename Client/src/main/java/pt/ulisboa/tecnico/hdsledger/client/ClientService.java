@@ -1,9 +1,9 @@
 package pt.ulisboa.tecnico.hdsledger.client;
 
-import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.*;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.GlobalConfig;
+import pt.ulisboa.tecnico.hdsledger.utilities.MessageType;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 
 import java.io.IOException;
@@ -14,13 +14,11 @@ public class ClientService {
 
     private static final CustomLogger LOGGER = new CustomLogger(ClientService.class.getName());
     private final ProcessConfig clientConfig;
-    private final ProcessConfig serverConfig;
     private final Link link;
-    private BlockingQueue<AppendReplyMessage> replyMessagesQueue = new LinkedBlockingQueue<>();
+    private BlockingQueue<DecideMessage> replyMessagesQueue = new LinkedBlockingQueue<>();
 
     public ClientService(GlobalConfig config, Link link) {
         this.clientConfig = config.getCurrentNodeConfig();
-        this.serverConfig = config.getCurrentLeaderConfig();
         this.link = link;
 
         // Initialize listener
@@ -31,10 +29,10 @@ public class ClientService {
         }
     }
 
-    public AppendReplyMessage append(String value) {
-        ConsensusMessage serviceMessage = new ConsensusMessage(clientConfig.getId(), Message.Type.APPEND);
+    public DecideMessage append(String value) {
+        ConsensusMessage serviceMessage = new ConsensusMessage(clientConfig.getId(), MessageType.APPEND);
         serviceMessage.setMessage((new AppendMessage(value)).toJson());
-        this.link.send(this.serverConfig.getId(), serviceMessage);
+        this.link.broadcast(serviceMessage);
 
         try {
             return replyMessagesQueue.take();
@@ -52,10 +50,10 @@ public class ClientService {
                 new Thread(() -> {
 
                     switch (message.getType()) {
-                        case APPEND_REPLY -> {
+                        case DECIDE -> {
                             ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                             try {
-                                replyMessagesQueue.put(consensusMessage.deserializeAppendReplyMessage());
+                                replyMessagesQueue.put(consensusMessage.deserializeDecideMessage());
                             } catch (InterruptedException e) {
                                 throw new RuntimeException(e);
                             }
