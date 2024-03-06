@@ -129,6 +129,10 @@ public class GlobalConfig {
         return this.tests;
     }
 
+    public List<ProcessConfig> getServers() {
+        return servers;
+    }
+
     public void setServers(List<ProcessConfig> servers) {
         this.servers = servers;
     }
