@@ -53,16 +53,16 @@ public class MessageBucket {
 
         bucket.get(instance).get(round).values().forEach((message) -> {
             RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
-            int preparedRound = roundChangeMessage.getPreparedRound();
+            int msgRound = message.getRound();
 
-            if (preparedRound > round) {
+            if (msgRound > round) {
                 String value = roundChangeMessage.getPreparedValue();
                 frequency.put(value, frequency.getOrDefault(value, 0) + 1);
 
                 if (!valuePreparedRoundMap.containsKey(value))
                     valuePreparedRoundMap.put(value, new ArrayList<>());
 
-                valuePreparedRoundMap.get(value).add(preparedRound);
+                valuePreparedRoundMap.get(value).add(msgRound);
             }
         });
 

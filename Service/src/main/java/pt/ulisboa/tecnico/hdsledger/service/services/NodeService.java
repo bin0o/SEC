@@ -155,11 +155,13 @@ public class NodeService implements UDPService {
 
             if (roundChange.isEmpty()) {
                 LOGGER.log(Level.INFO,
-                        "{0} - Prepared round  can't be higher that current round , ignored");
+                        "roundChange Quorum is empty at UponPrePrepare" );
                 return;
             }
 
             if (!justifyPrePrepare(consensusInstance, round, highestPrepared(roundChange.get()), message)) {
+                LOGGER.log(Level.INFO,
+                        "PrePrepared isn\'t justified, ignored");
                 return;
             }
         }
@@ -503,7 +505,11 @@ public class NodeService implements UDPService {
 
             ConsensusMessage highest = highestPrepared(roundChange.get());
 
-            if (!justifyRoundChange(message.getConsensusInstance(), round, highest)) return;
+            if (!justifyRoundChange(message.getConsensusInstance(), round, highest)) {
+                LOGGER.log(Level.INFO,
+                        "RoundChange message isn\'t justified, ignored" );
+                return;
+            }
 
             PrePrepareMessage prePrepareMessage;
 
