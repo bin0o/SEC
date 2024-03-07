@@ -103,14 +103,8 @@ public class GlobalConfig {
     }
 
     private int currentLeader(Integer consensusInstance, Integer round) {
-        int combinedHash = Objects.hash(consensusInstance, round);
-
-        // Ensure the hash is non-negative
-        long nonNegativeHash = combinedHash & 0xffffffffL;
-
-        // Map the combined hash to the target range
-
-        return (int)(nonNegativeHash % servers.size());
+        LOGGER.log(Level.INFO, MessageFormat.format("Leader: {0}", ((round - 1) % servers.size() + 1)));
+        return ((round - 1) % servers.size());
     }
 
     public boolean isLeader(String id, Integer consensusInstance, Integer round) {

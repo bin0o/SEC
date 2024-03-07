@@ -38,11 +38,12 @@
         [],
         [
             {
-                "id": "2",
+                "id": "1",
                 "state": {
-                    "DROP": ["PREPARE"]
+                    "DROP": ["PRE_PREPARE", "PREPARE", "COMMIT", "DECIDE", "ROUND_CHANGE", "IGNORE", "ACK"]
                 }
             }
-        ]
+        ],
+        []
     ]
 }
