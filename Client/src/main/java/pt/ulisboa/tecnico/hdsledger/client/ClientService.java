@@ -1,12 +1,14 @@
 package pt.ulisboa.tecnico.hdsledger.client;
 
+import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.*;
-import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
-import pt.ulisboa.tecnico.hdsledger.utilities.GlobalConfig;
-import pt.ulisboa.tecnico.hdsledger.utilities.MessageType;
-import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
+import pt.ulisboa.tecnico.hdsledger.utilities.*;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.security.PrivateKey;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -17,9 +19,20 @@ public class ClientService {
     private final Link link;
     private BlockingQueue<DecideMessage> replyMessagesQueue = new LinkedBlockingQueue<>();
 
+    private PrivateKey privateKey;
+
     public ClientService(GlobalConfig config, Link link) {
         this.clientConfig = config.getCurrentNodeConfig();
         this.link = link;
+
+        // Setup private key
+        File file = new File( config.getKeysLocation() + "/Node" + this.clientConfig.getId() + "/server.key");
+        try {
+            String key = Files.readString(file.toPath(), Charset.defaultCharset());
+            this.privateKey = CryptoUtils.parsePrivateKey(key);
+        } catch (IOException e){
+            throw new HDSSException(ErrorMessage.KeyParsingFailed);
+        }
 
         // Initialize listener
         try {
@@ -31,7 +44,7 @@ public class ClientService {
 
     public DecideMessage append(String value) {
         ConsensusMessage serviceMessage = new ConsensusMessage(clientConfig.getId(), MessageType.APPEND);
-        serviceMessage.setMessage((new AppendMessage(value)).toJson());
+        serviceMessage.setMessage((new AppendMessage(value, authenticate(value))).toJson());
         this.link.broadcast(serviceMessage);
 
         try {
@@ -39,6 +52,10 @@ public class ClientService {
         }catch (Exception e) {
             return null;
         }
+    }
+
+    public String authenticate(String value) {
+        return CryptoUtils.generateSignature(value.getBytes(), this.privateKey);
     }
 
     private void listen() {

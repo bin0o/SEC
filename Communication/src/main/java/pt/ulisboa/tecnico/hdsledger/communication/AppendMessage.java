@@ -5,9 +5,14 @@ import com.google.gson.Gson;
 public class AppendMessage {
     private final String value;
 
-    public AppendMessage(String value) {
+    private final String justification;
+
+    public AppendMessage(String value, String justification) {
         this.value = value;
+        this.justification = justification;
     }
+
+    public String getJustification() { return justification; }
 
     public String getValue() {
         return value;
