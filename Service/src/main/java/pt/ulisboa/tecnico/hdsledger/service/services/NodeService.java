@@ -39,6 +39,8 @@ public class NodeService implements UDPService {
     private final AtomicInteger lastDecidedConsensusInstance = new AtomicInteger(0);
 
     private String inputValue;
+    
+    private String clientId;
 
     // Ledger (for now, just a list of strings)
     private ArrayList<String> ledger = new ArrayList<String>();
@@ -89,6 +91,7 @@ public class NodeService implements UDPService {
         // Set initial consensus values
         this.inputValue = value;
         int localConsensusInstance = this.consensusInstance.incrementAndGet();
+        this.clientId = clientId;
         InstanceInfo existingConsensus = this.instanceInfo.put(localConsensusInstance, new InstanceInfo(value, clientId, config.getRoundTime()));
 
         // If startConsensus was already called for a given round
@@ -187,7 +190,7 @@ public class NodeService implements UDPService {
         }
 
         // Set instance value
-        this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value, null, config.getRoundTime()));
+        this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value, this.clientId, config.getRoundTime()));
 
         // Within an instance of the algorithm, each upon rule is triggered at most once
         // for any round r
@@ -245,7 +248,7 @@ public class NodeService implements UDPService {
         messages.addMessage(message);
 
         // Set instance values
-        this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value, null, config.getRoundTime()));
+        this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value, this.clientId, config.getRoundTime()));
         InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
         // Within an instance of the algorithm, each upon rule is triggered at most once
@@ -428,7 +431,7 @@ public class NodeService implements UDPService {
 
             this.instanceInfo.get(consensusInstance).setTimer(null);
 
-            if (this.config.isLeader(current.getId(), consensusInstance, round) && this.instanceInfo.containsKey(consensusInstance)) {
+            if (this.instanceInfo.containsKey(consensusInstance)) {
                 InstanceInfo info = this.instanceInfo.get(consensusInstance);
 
                 LOGGER.log(Level.INFO,
@@ -438,9 +441,11 @@ public class NodeService implements UDPService {
 
                 if (config.dropMessage(consensusInstance, MessageType.DECIDE)) return;
 
+
+                LOGGER.log(Level.INFO,MessageFormat.format("[DECIDE] Valor mandado: {0}", value));
                 // Reply to the guy who appended the block
                 ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
-                serviceMessage.setMessage((new DecideMessage(true, consensusInstance - 1)).toJson());
+                serviceMessage.setMessage((new DecideMessage(true, consensusInstance - 1, value)).toJson());
                 this.link.send(info.getClientId(), serviceMessage);
             }
         }

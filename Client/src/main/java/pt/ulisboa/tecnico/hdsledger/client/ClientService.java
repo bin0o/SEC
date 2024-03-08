@@ -9,17 +9,21 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.security.PrivateKey;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.text.MessageFormat;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.*;
+import java.util.logging.Level;
 
 public class ClientService {
 
     private static final CustomLogger LOGGER = new CustomLogger(ClientService.class.getName());
     private final ProcessConfig clientConfig;
     private final Link link;
-    private BlockingQueue<DecideMessage> replyMessagesQueue = new LinkedBlockingQueue<>();
-
-    private PrivateKey privateKey;
+    private final PrivateKey privateKey;
+    private final Map<String, DecideMessage> receivedMessages = new ConcurrentHashMap<>();
+    ExecutorService threadpool = Executors.newCachedThreadPool();
 
     public ClientService(GlobalConfig config, Link link) {
         this.clientConfig = config.getCurrentNodeConfig();
@@ -40,6 +44,10 @@ public class ClientService {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public Future<DecideMessage> awaitDecide() {
+        return threadpool.submit(() -> {});
     }
 
     public DecideMessage append(String value) {
@@ -65,15 +73,10 @@ public class ClientService {
 
                 // Separate thread to handle each message
                 new Thread(() -> {
-
                     switch (message.getType()) {
                         case DECIDE -> {
                             ConsensusMessage consensusMessage = ((ConsensusMessage) message);
-                            try {
-                                replyMessagesQueue.put(consensusMessage.deserializeDecideMessage());
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
+                            receivedMessages.putIfAbsent(consensusMessage.getSenderId(), consensusMessage.deserializeDecideMessage());
                         }
                         default -> {}
                     }

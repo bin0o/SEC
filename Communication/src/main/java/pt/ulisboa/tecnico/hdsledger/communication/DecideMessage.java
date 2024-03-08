@@ -8,9 +8,12 @@ public class DecideMessage {
 
     private final int index;
 
-    public DecideMessage(boolean confirmation, int index) {
+    private final String value;
+
+    public DecideMessage(boolean confirmation, int index, String value) {
         this.confirmation = confirmation;
         this.index = index;
+        this.value = value;
     }
 
     public boolean getConfirmation() {
@@ -19,6 +22,10 @@ public class DecideMessage {
 
     public int getIndex() {
         return this.index;
+    }
+
+    public String getValue() {
+        return this.value;
     }
 
     public String toJson() {
@@ -30,6 +37,7 @@ public class DecideMessage {
         return "AppendReplyMessage{" +
                 "confirmation=" + confirmation +
                 ", index=" + index +
+                ", value=" + value +
                 '}';
     }
 }
