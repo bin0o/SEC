@@ -1,0 +1,26 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------< pt.ulisboa.tecnico.hdsledger.T19:Service >--------------
+[INFO] Building Service 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- exec:3.0.0:java (default-cli) @ Service ---
+[GlobalConfig Tests]: Parsed tests for 3 instances
+Leader: 1
+4 - Running at localhost:3,004; is leader: false
+Exception in thread "Thread-0" java.io.IOError: java.io.IOException: Input/output error
+	at org.fusesource.jansi.AnsiConsole.systemUninstall(AnsiConsole.java:544)
+	at org.apache.maven.shared.utils.logging.MessageUtils.doSystemUninstall(MessageUtils.java:101)
+	at org.apache.maven.shared.utils.logging.MessageUtils.access$100(MessageUtils.java:34)
+	at org.apache.maven.shared.utils.logging.MessageUtils$1.run(MessageUtils.java:211)
+Caused by: java.io.IOException: Input/output error
+	at java.base/java.io.FileOutputStream.writeBytes(Native Method)
+	at java.base/java.io.FileOutputStream.write(FileOutputStream.java:367)
+	at org.fusesource.jansi.io.FastBufferedOutputStream.flushBuffer(FastBufferedOutputStream.java:58)
+	at org.fusesource.jansi.io.FastBufferedOutputStream.flush(FastBufferedOutputStream.java:65)
+	at java.base/java.io.FilterOutputStream.flush(FilterOutputStream.java:155)
+	at org.fusesource.jansi.io.AnsiOutputStream.uninstall(AnsiOutputStream.java:338)
+	at org.fusesource.jansi.AnsiPrintStream.uninstall(AnsiPrintStream.java:82)
+	at org.fusesource.jansi.AnsiConsole.systemUninstall(AnsiConsole.java:541)
+	... 3 more

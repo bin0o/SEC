@@ -4,15 +4,19 @@ import os
 import json
 import sys
 import signal
-
+import platform
 
 # Terminal Emulator used to spawn the processes
+
 terminal = "kitty"
-terminal_mac = "/Applications/kitty.app/Contents/MacOS/kitty"
+terminal_run_path = "kitty"
+
+if platform.system() == "Darwin":
+    terminal_run_path = "/Applications/kitty.app/Contents/MacOS/kitty"
 
 # Blockchain node configuration file name
 server_configs = [
-    "regular_config.json",
+    "regular_config.json"
 ]
 
 
@@ -44,7 +48,7 @@ with open(f"Configs/{server_config}") as f:
             os.system(f"openssl rsa -pubout -in Node{key['id']}/server.key -out public{key['id']}.key")
             os.chdir(f"..")
             if not key['isClient']:
-                os.system(f"{terminal_mac} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} ../Configs/{server_config}' ; sleep 500\"")
+                os.system(f"{terminal_run_path} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} ../Configs/{server_config}' ; sleep 500\"")
             sys.exit()
 
 signal.signal(signal.SIGINT, quit_handler)

@@ -1,0 +1,62 @@
+{
+  "roundTime": 10000,
+  "timerInterval": 500,
+  "keysLocation": "/Users/goncalosilva/Documents/MEIC/SEC/SEC/Keys",
+  "nodes": [
+    {
+      "id": "1",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3001
+    },
+    {
+      "id": "2",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3002
+    },
+    {
+      "id": "3",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3003
+    },
+    {
+      "id": "4",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3004
+    },
+    {
+      "id": "5",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3005
+    },
+    {
+      "id": "client1",
+      "isClient": true,
+      "hostname": "localhost",
+      "port": 3006
+    },
+    {
+      "id": "client2",
+      "isClient": true,
+      "hostname": "localhost",
+      "port": 3007
+    }
+  ],
+  "tests": [
+    [],
+    [
+      {
+        "id": "1",
+        "state": {
+          "DROP": ["PRE_PREPARE","PREPARE","COMMIT", "DECIDE", "ROUND_CHANGE"],
+          "TAMPER": {}
+        }
+      }
+    ],
+    []
+  ]
+}

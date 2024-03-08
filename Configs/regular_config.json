@@ -48,22 +48,7 @@
     ],
     "tests": [
         [],
-        [
-            {
-                "id": "1",
-                "state": {
-                    "DROP": ["PRE_PREPARE","PREPARE","COMMIT", "DECIDE", "ROUND_CHANGE", "IGNORE", "ACK"],
-                    "TAMPER": {}
-                }
-            },
-            {
-                "id": "2",
-                "state": {
-                    "DROP": ["PRE_PREPARE","PREPARE","COMMIT", "DECIDE", "ROUND_CHANGE", "IGNORE", "ACK"],
-                    "TAMPER": {}
-                }
-            }
-        ],
+        [],
         []
     ]
 }

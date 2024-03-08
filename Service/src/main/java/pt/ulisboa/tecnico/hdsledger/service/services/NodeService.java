@@ -111,7 +111,6 @@ public class NodeService implements UDPService {
         while (lastDecidedConsensusInstance.get() < localConsensusInstance - 1) {
             try {
                 Thread.sleep(1000);
-                LOGGER.log(Level.INFO, "SLEEPPPPPPPPPPPPPPPPPP");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -144,7 +143,6 @@ public class NodeService implements UDPService {
      * @param message Message to be handled
      */
     public void uponPrePrepare(ConsensusMessage message) {
-
 
         int consensusInstance = message.getConsensusInstance();
         int round = message.getRound();
@@ -330,7 +328,7 @@ public class NodeService implements UDPService {
         ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), MessageType.ROUND_CHANGE)
                 .setConsensusInstance(l)
                 .setRound(instance.getCurrentRound())
-                .setMessage(config.tamperMessage(l, MessageType.ROUND_CHANGE, RoundChangeMessage.class, roundChangeMessage.toJson()))
+                .setMessage(roundChangeMessage.toJson())
                 .build();
 
         if (config.dropMessage(l, MessageType.ROUND_CHANGE)) return;
@@ -495,16 +493,10 @@ public class NodeService implements UDPService {
 
         if (highestPrepared == null) {
             if (value != null && !value.equals(this.inputValue)) return false;
-
-            LOGGER.log(Level.INFO,"[JUSTIFY ROUND CHANGE]: highestPrepared == null, so TRUE");
             return true;
         }
 
-        LOGGER.log(Level.INFO,"[JUSTIFY ROUND CHANGE]: before loop");
-
         for (ConsensusMessage entry : messages.getMessages(instance, round, MessageType.PREPARE).get()) {
-
-            LOGGER.log(Level.INFO,"[JUSTIFY ROUND CHANGE]: going to the loop");
 
             String val = (value == null) ? entry.deserializePrepareMessage().getValue() : value;
 
@@ -557,7 +549,7 @@ public class NodeService implements UDPService {
             ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), MessageType.ROUND_CHANGE)
                     .setConsensusInstance(consensusInstance)
                     .setRound(instance.getCurrentRound())
-                    .setMessage(config.tamperMessage(consensusInstance, MessageType.ROUND_CHANGE, RoundChangeMessage.class, rc.toJson()))
+                    .setMessage(rc.toJson())
                     .build();
 
             if (config.dropMessage(consensusInstance, MessageType.ROUND_CHANGE)) return;
