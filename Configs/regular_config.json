@@ -28,10 +28,22 @@
             "port": 3004
         },
         {
+            "id": "5",
+            "isClient": false,
+            "hostname": "localhost",
+            "port": 3005
+        },
+        {
             "id": "client1",
             "isClient": true,
             "hostname": "localhost",
-            "port": 3005
+            "port": 3006
+        },
+        {
+            "id": "client2",
+            "isClient": true,
+            "hostname": "localhost",
+            "port": 3007
         }
     ],
     "tests": [
@@ -40,7 +52,15 @@
             {
                 "id": "1",
                 "state": {
-                    "DROP": ["PRE_PREPARE", "PREPARE", "COMMIT", "DECIDE", "ROUND_CHANGE", "IGNORE", "ACK"]
+                    "DROP": ["PRE_PREPARE","PREPARE","COMMIT", "DECIDE", "ROUND_CHANGE", "IGNORE", "ACK"],
+                    "TAMPER": {}
+                }
+            },
+            {
+                "id": "2",
+                "state": {
+                    "DROP": ["PRE_PREPARE","PREPARE","COMMIT", "DECIDE", "ROUND_CHANGE", "IGNORE", "ACK"],
+                    "TAMPER": {}
                 }
             }
         ],

@@ -1,6 +1,8 @@
 package pt.ulisboa.tecnico.hdsledger.utilities;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import pt.ulisboa.tecnico.hdsledger.utilities.tests.State;
 import pt.ulisboa.tecnico.hdsledger.utilities.tests.TestConfig;
@@ -75,31 +77,55 @@ public class GlobalConfig {
         }
     }
 
-    public boolean dropMessage(Integer instance, MessageType type) {
-
+    private Optional<State> getTestState(Integer instance) {
         // Instance begins at 1
         int index = instance - 1;
 
         if (index >= this.parsedTests.size())
-            return false;
+            return Optional.empty();
 
         Map<String, TestConfig> testConfig = this.parsedTests.get(index);
 
         if (testConfig == null)
-            return false;
+            return Optional.empty();
 
         if (!testConfig.containsKey(currentNodeId))
-            return false;
+            return Optional.empty();
 
-        State testState = testConfig.get(currentNodeId).getState();
+        return Optional.of(testConfig.get(currentNodeId).getState());
+    }
 
-        boolean drop = Arrays.asList(testState.getDROP()).contains(type);
+    public boolean dropMessage(Integer instance, MessageType type) {
+
+        Optional<State> testState = getTestState(instance);
+
+        if (testState.isEmpty()) return false;
+
+        boolean drop = Arrays.asList(testState.get().getDROP()).contains(type);
 
         if (drop) {
             LOGGER.log(Level.WARNING, MessageFormat.format("[GlobalConfig Tests]: DROP Message -> {0} / Instance {1}", type.toString(), instance));
         }
 
         return drop;
+    }
+
+    public String tamperMessage(Integer instance, MessageType type, Class classOfT, String inputData) {
+        Optional<State> testState = getTestState(instance);
+
+        if (testState.isEmpty()) return inputData;
+
+        JsonElement tamperedObject = testState.get().getTAMPER().get(type);
+
+        if (tamperedObject == null) return inputData;
+
+        Gson gson = new Gson();
+
+        String tamperedString = gson.toJson(gson.fromJson(tamperedObject, classOfT));
+
+        LOGGER.log(Level.INFO, MessageFormat.format("[GlobalConfig]: Tampered {0} for instance {1}: {2}", type.toString(), instance, tamperedString));
+
+        return tamperedString;
     }
 
     private int currentLeader(Integer consensusInstance, Integer round) {

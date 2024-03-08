@@ -38,6 +38,7 @@ public class NodeService implements UDPService {
     // Last decided consensus instance
     private final AtomicInteger lastDecidedConsensusInstance = new AtomicInteger(0);
 
+    private int abortedValues;
     private String inputValue;
     
     private String clientId;
@@ -52,6 +53,7 @@ public class NodeService implements UDPService {
         this.current = config.getCurrentNodeConfig();
 
         this.messages = new MessageBucket(config.getServers().size());
+        this.abortedValues = 0;
     }
 
     public GlobalConfig getConfig() {
@@ -73,7 +75,7 @@ public class NodeService implements UDPService {
         ConsensusMessage consensusMessage = new ConsensusMessageBuilder(current.getId(), MessageType.PRE_PREPARE)
                 .setConsensusInstance(instance)
                 .setRound(round)
-                .setMessage(prePrepareMessage.toJson())
+                .setMessage(config.tamperMessage(instance, MessageType.PRE_PREPARE, PrePrepareMessage.class, prePrepareMessage.toJson()))
                 .build();
 
         return consensusMessage;
@@ -214,7 +216,7 @@ public class NodeService implements UDPService {
         ConsensusMessage consensusMessage = new ConsensusMessageBuilder(current.getId(), MessageType.PREPARE)
                 .setConsensusInstance(consensusInstance)
                 .setRound(round)
-                .setMessage(prepareMessage.toJson())
+                .setMessage(config.tamperMessage(consensusInstance, MessageType.PREPARE, PrepareMessage.class, prepareMessage.toJson()))
                 .setReplyTo(senderId)
                 .setReplyToMessageId(senderMessageId)
                 .build();
@@ -267,7 +269,7 @@ public class NodeService implements UDPService {
                     .setRound(round)
                     .setReplyTo(senderId)
                     .setReplyToMessageId(message.getMessageId())
-                    .setMessage(instance.getCommitMessage().toJson())
+                    .setMessage(config.tamperMessage(consensusInstance, MessageType.COMMIT, CommitMessage.class, instance.getCommitMessage().toJson()))
                     .build();
 
             if (config.dropMessage(consensusInstance, MessageType.COMMIT)) return;
@@ -295,7 +297,7 @@ public class NodeService implements UDPService {
                         .setRound(round)
                         .setReplyTo(senderMessage.getSenderId())
                         .setReplyToMessageId(senderMessage.getMessageId())
-                        .setMessage(c.toJson())
+                        .setMessage(config.tamperMessage(consensusInstance, MessageType.COMMIT, CommitMessage.class, c.toJson()))
                         .build();
 
                 if (config.dropMessage(consensusInstance, MessageType.COMMIT)) return;
@@ -324,11 +326,15 @@ public class NodeService implements UDPService {
         }
 
         RoundChangeMessage roundChangeMessage = new RoundChangeMessage(justification, instance.getPreparedRound(), instance.getPreparedValue());
+
         ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), MessageType.ROUND_CHANGE)
                 .setConsensusInstance(l)
                 .setRound(instance.getCurrentRound())
-                .setMessage(roundChangeMessage.toJson())
+                .setMessage(config.tamperMessage(l, MessageType.ROUND_CHANGE, RoundChangeMessage.class, roundChangeMessage.toJson()))
                 .build();
+
+        if (config.dropMessage(l, MessageType.ROUND_CHANGE)) return;
+
         link.broadcast(m);
     }
 
@@ -405,21 +411,43 @@ public class NodeService implements UDPService {
 
             String value = commitValue.get();
 
+            int elapsedTime = 0;
+            for (int i = 1; i < instance.getCurrentRound(); i++) {
+                elapsedTime += config.getRoundTime() * (int) Math.pow(2, i);
+            }
+
+            elapsedTime += (config.getRoundTime() * (int) Math.pow(2, instance.getCurrentRound())) - this.instanceInfo.get(consensusInstance).getTimer();
+
+            int f = Math.floorDiv(config.getNodesConfigs().length - 1, 3);
+            int quorumSize = Math.floorDiv(config.getServers().size() + f, 2) + 1;
+            int clientMaxTimeout = (quorumSize + 1) * config.getRoundTime();
+
+            int realLedgerSize = consensusInstance - abortedValues;
+
             // Append value to the ledger (must be synchronized to be thread-safe)
             synchronized (ledger) {
 
-                // Increment size of ledger to accommodate current instance
-                ledger.ensureCapacity(consensusInstance);
-                while (ledger.size() < consensusInstance - 1) {
-                    ledger.add("");
+                if (elapsedTime > clientMaxTimeout) {
+                    LOGGER.log(Level.INFO,
+                            MessageFormat.format(
+                                    "{0} - [WARNING]: Value will not be appended since instance elapsed time was greater than client maximum timeout (Instance: {1}ms > {2}ms)",
+                                    current.getId(), elapsedTime, clientMaxTimeout));
+                    abortedValues++;
+                } else {
+                    // Increment size of ledger to accommodate current instance
+                    ledger.ensureCapacity(realLedgerSize);
+                    while (ledger.size() < realLedgerSize - 1) {
+                        ledger.add("");
+                    }
+
+                    ledger.add(realLedgerSize - 1, value);
+
+                    LOGGER.log(Level.INFO,
+                            MessageFormat.format(
+                                    "{0} - Current Ledger: {1}",
+                                    current.getId(), String.join("", ledger)));
                 }
 
-                ledger.add(consensusInstance - 1, value);
-
-                LOGGER.log(Level.INFO,
-                        MessageFormat.format(
-                                "{0} - Current Ledger: {1}",
-                                current.getId(), String.join("", ledger)));
             }
 
             lastDecidedConsensusInstance.getAndIncrement();
@@ -442,10 +470,10 @@ public class NodeService implements UDPService {
                 if (config.dropMessage(consensusInstance, MessageType.DECIDE)) return;
 
 
-                LOGGER.log(Level.INFO,MessageFormat.format("[DECIDE] Valor mandado: {0}", value));
+                LOGGER.log(Level.INFO,MessageFormat.format("[DECIDE] Value sent: {0}", value));
                 // Reply to the guy who appended the block
                 ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
-                serviceMessage.setMessage((new DecideMessage(true, consensusInstance - 1, value)).toJson());
+                serviceMessage.setMessage(config.tamperMessage(consensusInstance, MessageType.DECIDE, DecideMessage.class, (new DecideMessage(true, realLedgerSize - 1, value)).toJson()));
                 this.link.send(info.getClientId(), serviceMessage);
             }
         }
@@ -466,6 +494,8 @@ public class NodeService implements UDPService {
     public synchronized boolean justifyRoundChange(int instance, int round, ConsensusMessage highestPrepared, String value) {
 
         if (highestPrepared == null) {
+            if (value != null && !value.equals(this.inputValue)) return false;
+
             LOGGER.log(Level.INFO,"[JUSTIFY ROUND CHANGE]: highestPrepared == null, so TRUE");
             return true;
         }
@@ -485,6 +515,7 @@ public class NodeService implements UDPService {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -526,7 +557,7 @@ public class NodeService implements UDPService {
             ConsensusMessage m = new ConsensusMessageBuilder(current.getId(), MessageType.ROUND_CHANGE)
                     .setConsensusInstance(consensusInstance)
                     .setRound(instance.getCurrentRound())
-                    .setMessage(rc.toJson())
+                    .setMessage(config.tamperMessage(consensusInstance, MessageType.ROUND_CHANGE, RoundChangeMessage.class, rc.toJson()))
                     .build();
 
             if (config.dropMessage(consensusInstance, MessageType.ROUND_CHANGE)) return;
@@ -563,10 +594,11 @@ public class NodeService implements UDPService {
             }
 
             if (config.dropMessage(consensusInstance, MessageType.PRE_PREPARE)) return;
+
             ConsensusMessage consensusMessage = new ConsensusMessageBuilder(current.getId(), MessageType.PRE_PREPARE)
                     .setConsensusInstance(consensusInstance)
                     .setRound(round)
-                    .setMessage(prePrepareMessage.toJson())
+                    .setMessage(config.tamperMessage(consensusInstance, MessageType.PRE_PREPARE, PrePrepareMessage.class, prePrepareMessage.toJson()))
                     .build();
 
             link.broadcast(consensusMessage);

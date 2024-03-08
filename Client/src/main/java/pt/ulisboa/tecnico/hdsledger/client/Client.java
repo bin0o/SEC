@@ -7,12 +7,13 @@ import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 
 public class Client {
     private static final CustomLogger LOGGER = new CustomLogger(Client.class.getName());
 
-    public static void main (String[] args) {
+    public static void main (String[] args) throws ExecutionException, InterruptedException {
 
         String id = args[0];
         String configPath = args[1];
@@ -37,6 +38,7 @@ public class Client {
 
             if (lol.equals("quit")) System.exit(0);
 
+            if (lol.isBlank()) continue;
             LOGGER.log(Level.INFO, MessageFormat.format("Received: {0}", clientService.append(lol).toString()));
         }
     }
