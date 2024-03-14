@@ -1,17 +1,20 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 import com.google.gson.Gson;
 
+import java.util.Collection;
+import java.util.List;
+
 public class RoundChangeMessage {
-    private final ConsensusMessage justification;
+    private final Collection<ConsensusMessage> justification;
     private final int preparedRound;
     private final String preparedValue;
 
-    public RoundChangeMessage(ConsensusMessage justification, int preparedRound, String preparedValue) {
+    public RoundChangeMessage(Collection<ConsensusMessage> justification, int preparedRound, String preparedValue) {
         this.justification = justification;
         this.preparedRound = preparedRound;
         this.preparedValue = preparedValue;
     }
-    public ConsensusMessage getJustification() {
+    public Collection<ConsensusMessage> getJustification() {
         return justification;
     }
 

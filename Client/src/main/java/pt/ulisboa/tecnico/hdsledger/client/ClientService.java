@@ -22,12 +22,10 @@ public class ClientService {
     private final PrivateKey privateKey;
     private final Map<String, DecideMessage> receivedMessages = new ConcurrentHashMap<>();
     private final GlobalConfig config;
+    private final int f;
 
-    // Timeout system
-    private boolean timeout = false;
-    Timer timeoutTimer;
-
-    private final int quorumSize;
+    // Create mapping of value to frequency
+    HashMap<String, Integer> frequency = new HashMap<>();
     ExecutorService threadpool = Executors.newCachedThreadPool();
 
     public ClientService(GlobalConfig config, Link link) {
@@ -35,8 +33,7 @@ public class ClientService {
         this.link = link;
         this.config = config;
 
-        int f = Math.floorDiv(config.getNodesConfigs().length - 1, 3);
-        this.quorumSize = Math.floorDiv(config.getServers().size() + f, 2) + 1;
+        this.f = Math.floorDiv(config.getNodesConfigs().length - 1, 3);
 
         // Setup private key
         File file = new File(config.getKeysLocation() + "/Node" + this.clientConfig.getId() + "/server.key");
@@ -53,59 +50,24 @@ public class ClientService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        // Init timeout timer
-        this.timeoutTimer = new Timer();
     }
 
     public Future<DecideMessage> awaitDecide() {
-
-        DecideMessage invalidDecide = new DecideMessage(false, -1, null);
-
         return threadpool.submit(() -> {
 
             LOGGER.log(Level.INFO, "Waiting for DECIDE responses...");
 
-            while (receivedMessages.size() < quorumSize && !timeout) {}
+            Optional<String> value = Optional.empty();
 
-            if (timeout) {
-                LOGGER.log(Level.INFO, "Timed out while waiting for DECIDE response!");
-                return invalidDecide;
+            while (value.isEmpty()) {
+                Thread.sleep(500);
+                value = checkFPlusOne();
             }
 
-            // Received all the messages, stop timeout timer
-            timeoutTimer.cancel();
-
-            Optional<DecideMessage> first = receivedMessages.values().stream().findFirst();
-
-            if (first.isEmpty()) return invalidDecide;
-
-            LOGGER.log(Level.INFO, "Checking DECIDE responses");
-
-            for (DecideMessage msg : receivedMessages.values()) {
-                if (!msg.toJson().equals(first.get().toJson())) return invalidDecide;
-            }
-
-            return first.get();
+            return receivedMessages.get(value.get());
         });
     }
 
-    private void resetTimer() {
-        timeout = false;
-
-        timeoutTimer.cancel();
-
-        timeoutTimer = new Timer();
-
-        int remain = quorumSize - receivedMessages.size();
-        long duration = (long) ((remain > 0) ? remain + 1 : 1) * config.getRoundTime();
-        timeoutTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                timeout = true;
-            }
-        }, duration);
-    }
 
     public DecideMessage append(String value) throws ExecutionException, InterruptedException {
         ConsensusMessage serviceMessage = new ConsensusMessage(clientConfig.getId(), MessageType.APPEND);
@@ -113,7 +75,6 @@ public class ClientService {
         this.link.broadcast(serviceMessage);
 
         receivedMessages.clear();
-        resetTimer();
 
         Future<DecideMessage> decide = awaitDecide();
 
@@ -127,6 +88,15 @@ public class ClientService {
         return CryptoUtils.generateSignature(value.getBytes(), this.privateKey);
     }
 
+    private Optional<String> checkFPlusOne() {
+        for (Map.Entry<String, Integer> freq : frequency.entrySet()) {
+            if (freq.getValue() >= f + 1) {
+                return Optional.of(freq.getKey());
+            }
+        }
+        return Optional.empty();
+    }
+
     private void listen() {
         try {
             while (true) {
@@ -138,7 +108,9 @@ public class ClientService {
                         case DECIDE -> {
                             ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                             receivedMessages.putIfAbsent(consensusMessage.getSenderId(), consensusMessage.deserializeDecideMessage());
-                            resetTimer();
+
+                            String value = consensusMessage.deserializeDecideMessage().getValue();
+                            frequency.put(value, frequency.getOrDefault(value, 0) + 1);
                         }
                         default -> {
                         }
