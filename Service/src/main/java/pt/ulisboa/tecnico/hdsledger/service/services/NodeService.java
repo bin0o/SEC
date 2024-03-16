@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.*;
@@ -38,7 +39,6 @@ public class NodeService implements UDPService {
     // Last decided consensus instance
     private final AtomicInteger lastDecidedConsensusInstance = new AtomicInteger(0);
 
-    private int abortedValues;
     private String inputValue;
     
     private String clientId;
@@ -53,7 +53,6 @@ public class NodeService implements UDPService {
         this.current = config.getCurrentNodeConfig();
 
         this.messages = new MessageBucket(config.getServers().size());
-        this.abortedValues = 0;
     }
 
     public GlobalConfig getConfig() {
@@ -172,22 +171,13 @@ public class NodeService implements UDPService {
         if (!this.config.isLeader(senderId, consensusInstance, round))
             return;
 
-        if (round > 1) {
 
-            Optional<Collection<ConsensusMessage>> roundChange = messages.getRoundChangeQuorum(message.getConsensusInstance(), round);
-
-            if (roundChange.isEmpty()) {
-                LOGGER.log(Level.INFO,
-                        "roundChange Quorum is empty at UponPrePrepare" );
-                return;
-            }
-
-            if (!justifyPrePrepare(consensusInstance, round, highestPrepared(roundChange.get()), message)) {
-                LOGGER.log(Level.INFO,
-                        "PrePrepare isn\'t justified, ignored");
-                return;
-            }
+        if (!justifyPrePrepare(round, message)) {
+            LOGGER.log(Level.INFO,
+                    "PrePrepare isn't justified, ignored");
+            return;
         }
+
 
         // Set instance value
         this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value, this.clientId, config.getRoundTime()));
@@ -467,35 +457,43 @@ public class NodeService implements UDPService {
         return highestPreparedMessage;
     }
 
-    public synchronized boolean justifyRoundChange(int instance, int round, ConsensusMessage highestPrepared, String value) {
 
-        if (highestPrepared == null) {
-            if (value != null && !value.equals(this.inputValue)) return false;
-            return true;
-        }
-
-        for (ConsensusMessage entry : messages.getMessages(instance, round, MessageType.PREPARE).get()) {
-
-            String val = (value == null) ? entry.deserializePrepareMessage().getValue() : value;
-
-            if (!val.equals(highestPrepared.deserializeRoundChangeMessage().getPreparedValue())) {
-                return false;
-            }
-            if (entry.getRound() != highestPrepared.deserializeRoundChangeMessage().getPreparedRound()) {
+    private synchronized boolean validate_round_change_message(ConsensusMessage roundChange, ConsensusMessage highestPrepare) {
+        for(ConsensusMessage consensusMessage : roundChange.deserializeRoundChangeMessage().getJustification()){
+            PrepareMessage prepare = consensusMessage.deserializePrepareMessage();
+            if(consensusMessage.getRound() != highestPrepare.getRound() || !highestPrepare.deserializePrepareMessage().getValue().equals(prepare.getValue())){
                 return false;
             }
         }
-
         return true;
     }
 
-    public synchronized boolean justifyRoundChange(int instance, int round, ConsensusMessage highestPrepared) {
-        return justifyRoundChange(instance, round, highestPrepared, null);
+    public synchronized boolean justifyRoundChange(List<ConsensusMessage> qrc) {
+        ConsensusMessage highestPrepared = highestPrepared(qrc);
+
+        if (highestPrepared == null) return true;
+
+        for (ConsensusMessage roundChange : qrc) {
+            if (roundChange.deserializeRoundChangeMessage().getPreparedRound() != -1 || !roundChange.deserializeRoundChangeMessage().getPreparedValue().isEmpty()) {
+                if (!validate_round_change_message(roundChange, highestPrepared)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
-    public synchronized boolean justifyPrePrepare(int instance, int round, ConsensusMessage highestPrepared, ConsensusMessage unparsedPrePrepare) {
+    public synchronized boolean justifyPrePrepare(int round, ConsensusMessage prePrepare) {
         LOGGER.log(Level.INFO, MessageFormat.format("[JUSTIFY PREPREPARE]: Round: {0}", round));
-        return (round == 1) || justifyRoundChange(instance, round, highestPrepared, unparsedPrePrepare.deserializePrePrepareMessage().getValue());
+
+        if (round > 1) {
+            for (ConsensusMessage rc : prePrepare.deserializePrePrepareMessage().getJustification()) {
+                if (!justifyRoundChange(rc.deserializeRoundChangeMessage().getJustification().stream().toList())) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public synchronized void uponRoundChange(ConsensusMessage message) {
@@ -549,9 +547,9 @@ public class NodeService implements UDPService {
 
             ConsensusMessage highest = highestPrepared(roundChange.get());
 
-            if (!justifyRoundChange(message.getConsensusInstance(), round, highest)) {
+            if (!justifyRoundChange(roundChangeMessage.getJustification().stream().toList())) {
                 LOGGER.log(Level.INFO,
-                        "RoundChange message isn\'t justified, ignored");
+                        "RoundChange message isn't justified, ignored");
                 return;
             }
 
@@ -562,6 +560,8 @@ public class NodeService implements UDPService {
             } else {
                 prePrepareMessage = new PrePrepareMessage(inputValue);
             }
+
+            prePrepareMessage.setJustification(roundChange.get());
 
             if (config.dropMessage(consensusInstance, MessageType.PRE_PREPARE)) return;
 

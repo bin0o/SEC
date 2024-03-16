@@ -108,8 +108,10 @@ public class MessageBucket {
 
     public Optional<Collection<ConsensusMessage>> getMessages(int instance, int round, MessageType type) {
 
+
         if (bucket.get(instance) == null || bucket.get(instance).get(round) == null || bucket.get(instance).get(round).get(type) == null) {
             LOGGER.log(Level.INFO, MessageFormat.format("Failed to get {0} messages for instance {1}, round {2}", type.toString(), instance, round));
+            LOGGER.log(Level.INFO, MessageFormat.format("Bucket content: {0}", (new Gson()).toJson(bucket)));
             return Optional.empty();
         }
 

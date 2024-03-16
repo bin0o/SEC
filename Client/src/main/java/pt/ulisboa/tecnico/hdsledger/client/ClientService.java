@@ -53,18 +53,21 @@ public class ClientService {
     }
 
     public Future<DecideMessage> awaitDecide() {
-        return threadpool.submit(() -> {
+    return threadpool.submit(
+        () -> {
+          LOGGER.log(Level.INFO, "Waiting for DECIDE responses...");
 
-            LOGGER.log(Level.INFO, "Waiting for DECIDE responses...");
+          Optional<String> value = Optional.empty();
 
-            Optional<String> value = Optional.empty();
+          while (value.isEmpty()) {
+            Thread.sleep(500);
+            value = checkFPlusOne();
+          }
 
-            while (value.isEmpty()) {
-                Thread.sleep(500);
-                value = checkFPlusOne();
-            }
+          LOGGER.log(Level.INFO, MessageFormat.format("Value: {0}", value.get()));
+          LOGGER.log(Level.INFO, MessageFormat.format("Received Messages: {0}", (new Gson()).toJson(receivedMessages)));
 
-            return receivedMessages.get(value.get());
+          return receivedMessages.get(value.get());
         });
     }
 
@@ -74,6 +77,7 @@ public class ClientService {
         serviceMessage.setMessage((new AppendMessage(value, authenticate(value))).toJson());
         this.link.broadcast(serviceMessage);
 
+        frequency.clear();
         receivedMessages.clear();
 
         Future<DecideMessage> decide = awaitDecide();
@@ -107,9 +111,10 @@ public class ClientService {
                     switch (message.getType()) {
                         case DECIDE -> {
                             ConsensusMessage consensusMessage = ((ConsensusMessage) message);
-                            receivedMessages.putIfAbsent(consensusMessage.getSenderId(), consensusMessage.deserializeDecideMessage());
-
                             String value = consensusMessage.deserializeDecideMessage().getValue();
+                            receivedMessages.putIfAbsent(value, consensusMessage.deserializeDecideMessage());
+
+
                             frequency.put(value, frequency.getOrDefault(value, 0) + 1);
                         }
                         default -> {
