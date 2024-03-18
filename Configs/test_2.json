@@ -1,7 +1,7 @@
 {
   "roundTime": 10000,
   "timerInterval": 500,
-  "keysLocation": "/Users/goncalosilva/Documents/MEIC/SEC/SEC/Keys",
+  "keysLocation": "/home/bino/Desktop/MEIC/SEC/Proj/sec2324-project-base/HDSLedger/Keys",
   "nodes": [
     {
       "id": "1",
@@ -34,13 +34,19 @@
       "port": 3005
     },
     {
-      "id": "client1",
-      "isClient": true,
+      "id": "6",
+      "isClient": false,
       "hostname": "localhost",
       "port": 3006
     },
     {
-      "id": "client2",
+      "id": "7",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3008
+    },
+    {
+      "id": "client1",
       "isClient": true,
       "hostname": "localhost",
       "port": 3007
@@ -63,7 +69,8 @@
           "TAMPER": {
             "PRE_PREPARE": {
               "value": "tamper_value",
-              "signature": ""
+              "signature": "",
+              "justification": []
             },
             "PREPARE": {
               "value": "tamper_value"

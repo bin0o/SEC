@@ -4,6 +4,8 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 
+import java.util.Collection;
+
 public class InstanceInfo {
 
     private int currentRound = 1;
@@ -14,17 +16,17 @@ public class InstanceInfo {
 
     private Integer timer;
 
-    private ConsensusMessage preparedJustificationMessage;
+    private Collection<ConsensusMessage> preparedJustificationMessage;
 
     private String clientId;
 
     private int committedRound = -1;
 
-    public ConsensusMessage getPreparedJustificationMessage(){
+    public Collection<ConsensusMessage> getPreparedJustificationMessage(){
         return this.preparedJustificationMessage;
     }
 
-    public void setPreparedJustificationMessage(ConsensusMessage msg){
+    public void setPreparedJustificationMessage(Collection<ConsensusMessage> msg){
         this.preparedJustificationMessage = msg;
     }
 
