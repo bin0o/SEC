@@ -4,13 +4,16 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import pt.ulisboa.tecnico.hdsledger.service.models.Account;
 import pt.ulisboa.tecnico.hdsledger.utilities.tests.State;
 import pt.ulisboa.tecnico.hdsledger.utilities.tests.TestConfig;
 
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessMode;
 import java.nio.file.Files;
+import java.security.PublicKey;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.logging.Level;
@@ -27,6 +30,8 @@ public class GlobalConfig {
     private List<Map<String, TestConfig>> parsedTests;
     private String currentNodeId;
 
+    private Map<PublicKey, Account> accounts;
+
     private static final CustomLogger LOGGER = new CustomLogger(GlobalConfig.class.getName());
 
     public static GlobalConfig fromFile(String path, String id) {
@@ -39,6 +44,7 @@ public class GlobalConfig {
             config.setCurrentNodeId(id);
 
             List<ProcessConfig> servers = new ArrayList<>();
+            Map<PublicKey, Account> accounts = new HashMap<>();
 
             // Populate with public keys
             Arrays.stream(config.getNodesConfigs()).forEach(processConfig -> {
@@ -50,12 +56,14 @@ public class GlobalConfig {
                 try {
                     String key = Files.readString(file.toPath(), Charset.defaultCharset());
                     processConfig.setPublicKey(CryptoUtils.parsePublicKey(key));
+                    accounts.put(processConfig.getPublicKey(), new Account(processConfig));
                 } catch (Exception e) {
                     throw new HDSSException(ErrorMessage.KeyParsingFailed);
                 }
             });
 
             config.setServers(servers);
+            config.setAccounts(accounts);
 
             // Parse tests
             config.setParsedTests(Arrays.stream(config.getTestsConfigs()).map(test -> {
@@ -193,5 +201,10 @@ public class GlobalConfig {
         return this.getNodeConfig(currentNodeId);
     }
 
-
+    public void setAccounts(Map<PublicKey, Account> accounts) {
+        this.accounts = accounts;
+    }
+    public Account getAccount(PublicKey clientId){
+        return this.accounts.get(clientId);
+    }
 }
