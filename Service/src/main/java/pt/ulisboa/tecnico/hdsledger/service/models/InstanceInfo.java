@@ -10,9 +10,9 @@ public class InstanceInfo {
 
     private int currentRound = 1;
     private int preparedRound = -1;
-    private String preparedValue;
+    private Transaction preparedValue;
     private CommitMessage commitMessage;
-    private String inputValue;
+    private Transaction inputValue;
 
     private Integer timer;
 
@@ -38,7 +38,7 @@ public class InstanceInfo {
         this.timer = timer;
     }
 
-    public InstanceInfo(String inputValue, String clientId, Integer timer) {
+    public InstanceInfo(Transaction inputValue, String clientId, Integer timer) {
         this.inputValue = inputValue;
         this.clientId = clientId;
         this.timer = timer;
@@ -68,19 +68,19 @@ public class InstanceInfo {
         this.preparedRound = preparedRound;
     }
 
-    public String getPreparedValue() {
+    public Transaction getPreparedValue() {
         return preparedValue;
     }
 
-    public void setPreparedValue(String preparedValue) {
+    public void setPreparedValue(Transaction preparedValue) {
         this.preparedValue = preparedValue;
     }
 
-    public String getInputValue() {
+    public Transaction getInputValue() {
         return inputValue;
     }
 
-    public void setInputValue(String inputValue) {
+    public void setInputValue(Transaction inputValue) {
         this.inputValue = inputValue;
     }
 

@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.client;
 
 import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.*;
+import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 
 import java.io.File;
@@ -72,7 +73,7 @@ public class ClientService {
     }
 
 
-    public DecideMessage append(String value) throws ExecutionException, InterruptedException {
+    public DecideMessage append(Transaction value) throws ExecutionException, InterruptedException {
         ConsensusMessage serviceMessage = new ConsensusMessage(clientConfig.getId(), MessageType.APPEND);
         serviceMessage.setMessage((new AppendMessage(value, authenticate(value))).toJson());
         this.link.broadcast(serviceMessage);
@@ -88,8 +89,8 @@ public class ClientService {
         return decide.get();
     }
 
-    public String authenticate(String value) {
-        return CryptoUtils.generateSignature(value.getBytes(), this.privateKey);
+    public String authenticate(Transaction value) {
+        return CryptoUtils.generateSignature(value.toString().getBytes(), this.privateKey);
     }
 
     private Optional<String> checkFPlusOne() {

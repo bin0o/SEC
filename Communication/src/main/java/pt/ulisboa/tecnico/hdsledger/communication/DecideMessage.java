@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
+import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
 
 public class DecideMessage {
 
@@ -8,9 +9,9 @@ public class DecideMessage {
 
     private final int index;
 
-    private final String value;
+    private final Transaction value;
 
-    public DecideMessage(boolean confirmation, int index, String value) {
+    public DecideMessage(boolean confirmation, int index, Transaction value) {
         this.confirmation = confirmation;
         this.index = index;
         this.value = value;
@@ -24,7 +25,7 @@ public class DecideMessage {
         return this.index;
     }
 
-    public String getValue() {
+    public Transaction getValue() {
         return this.value;
     }
 

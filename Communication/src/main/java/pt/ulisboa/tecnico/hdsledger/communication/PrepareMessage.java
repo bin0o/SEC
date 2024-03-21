@@ -1,17 +1,20 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
+import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 public class PrepareMessage {
     
     // Value
-    private String value;
+    private Transaction value;
 
-    public PrepareMessage(String value) {
+    public PrepareMessage(Transaction value) {
         this.value = value;
     }
 
-    public String getValue() {
+    public Transaction getValue() {
         return value;
     }
 

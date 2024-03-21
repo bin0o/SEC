@@ -13,8 +13,10 @@ import java.util.stream.Collectors;
 import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.*;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
+import pt.ulisboa.tecnico.hdsledger.service.models.Block;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
+import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 
 public class NodeService implements UDPService {
@@ -39,12 +41,12 @@ public class NodeService implements UDPService {
     // Last decided consensus instance
     private final AtomicInteger lastDecidedConsensusInstance = new AtomicInteger(0);
 
-    private String inputValue;
+    private Transaction inputValue;
     
     private String clientId;
 
     // Ledger (for now, just a list of strings)
-    private ArrayList<String> ledger = new ArrayList<String>();
+    private ArrayList<Block> ledger = new ArrayList<Block>();
 
     public NodeService(Link link, GlobalConfig config) {
 
@@ -63,11 +65,11 @@ public class NodeService implements UDPService {
         return this.consensusInstance.get();
     }
 
-    public ArrayList<String> getLedger() {
+    public ArrayList<Block> getLedger() {
         return this.ledger;
     }
 
-    public ConsensusMessage createConsensusMessage(String value, String signedValue, int instance, int round) {
+    public ConsensusMessage createConsensusMessage(Transaction value, String signedValue, int instance, int round) {
         PrePrepareMessage prePrepareMessage = new PrePrepareMessage(value);
         prePrepareMessage.setSignature(signedValue);
 
@@ -87,7 +89,7 @@ public class NodeService implements UDPService {
      *
      * @param inputValue Value to value agreed upon
      */
-    public void startConsensus(String value, String signedValue, String clientId) {
+    public void startConsensus(Transaction value, String signedValue, String clientId) {
 
         // Set initial consensus values
         this.inputValue = value;
@@ -131,8 +133,8 @@ public class NodeService implements UDPService {
         }
     }
 
-    public boolean verifyAuth(String value, String signature , PublicKey publicKey) {
-        return CryptoUtils.verifySignature(value.getBytes(), signature, publicKey);
+    public boolean verifyAuth(Transaction value, String signature , PublicKey publicKey) {
+        return CryptoUtils.verifySignature(value.toString().getBytes(), signature, publicKey);
     }
 
     /*
@@ -152,7 +154,7 @@ public class NodeService implements UDPService {
 
         PrePrepareMessage prePrepareMessage = message.deserializePrePrepareMessage();
 
-        String value = prePrepareMessage.getValue();
+        Transaction value = prePrepareMessage.getValue();
         String signedValue = prePrepareMessage.getSignature();
 
 
@@ -227,7 +229,7 @@ public class NodeService implements UDPService {
 
         PrepareMessage prepareMessage = message.deserializePrepareMessage();
 
-        String value = prepareMessage.getValue();
+        Transaction value = prepareMessage.getValue();
 
         LOGGER.log(Level.INFO,
                 MessageFormat.format(
@@ -267,7 +269,7 @@ public class NodeService implements UDPService {
         }
 
         // Find value with valid quorum
-        Optional<String> preparedValue = messages.getValidQuorumValue(consensusInstance, round, MessageType.PREPARE);
+        Optional<Transaction> preparedValue = messages.getValidQuorumValue(consensusInstance, round, MessageType.PREPARE);
 
         LOGGER.log(Level.INFO, MessageFormat.format("[UPON_PREPARE] preparedValue is present: {0}",preparedValue.isPresent()));
         LOGGER.log(Level.INFO, MessageFormat.format("[UPON_PREPARE] preparedValue is present: {0}",preparedValue.isPresent()));
@@ -390,14 +392,14 @@ public class NodeService implements UDPService {
             return;
         }
 
-        Optional<String> commitValue = messages.getValidQuorumValue(consensusInstance, round, MessageType.COMMIT);
+        Optional<Transaction> commitValue = messages.getValidQuorumValue(consensusInstance, round, MessageType.COMMIT);
 
         // Decide
         if (commitValue.isPresent() && instance.getCommittedRound() < round) {
             instance = this.instanceInfo.get(consensusInstance);
             instance.setCommittedRound(round);
 
-            String value = commitValue.get();
+            Transaction value = commitValue.get();
 
             // Append value to the ledger (must be synchronized to be thread-safe)
             synchronized (ledger) {
@@ -405,15 +407,18 @@ public class NodeService implements UDPService {
                 // Increment size of ledger to accommodate current instance
                 ledger.ensureCapacity(consensusInstance);
                 while (ledger.size() < consensusInstance - 1) {
-                    ledger.add("");
+                    ledger.add(new Block(null,null));
                 }
-
-                ledger.add(consensusInstance - 1, value);
+                if(consensusInstance - 1 > 1){
+                    ledger.add(consensusInstance - 1, new Block(value, this.ledger.get(consensusInstance - 2).getHash()));
+                }else{
+                    ledger.add(consensusInstance - 1, new Block(value, null));
+                }
 
                 LOGGER.log(Level.INFO,
                         MessageFormat.format(
                                 "{0} - Current Ledger: {1}",
-                                current.getId(), String.join("", ledger)));
+                                current.getId(), String.join((CharSequence) "", (CharSequence) ledger)));
             }
 
             lastDecidedConsensusInstance.getAndIncrement();
@@ -474,7 +479,7 @@ public class NodeService implements UDPService {
         if (highestPrepared == null) return true;
 
         for (ConsensusMessage roundChange : qrc) {
-            if (roundChange.deserializeRoundChangeMessage().getPreparedRound() != -1 || !roundChange.deserializeRoundChangeMessage().getPreparedValue().isEmpty()) {
+            if (roundChange.deserializeRoundChangeMessage().getPreparedRound() != -1 || roundChange.deserializeRoundChangeMessage().getPreparedValue() != null) {
                 if (!validate_round_change_message(roundChange, highestPrepared)) {
                     return false;
                 }
@@ -601,6 +606,7 @@ public class NodeService implements UDPService {
                                 case APPEND -> {
                                     ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                                     AppendMessage appendMessage = consensusMessage.deserializeStartMessage();
+                                    //o outro tmb tem de assinar
                                     startConsensus(appendMessage.getValue(), appendMessage.getJustification(), message.getSenderId());
                                 }
 

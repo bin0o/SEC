@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 import com.google.gson.Gson;
+import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
 
 import java.util.Collection;
 import java.util.List;
@@ -7,9 +8,9 @@ import java.util.List;
 public class RoundChangeMessage {
     private final Collection<ConsensusMessage> justification;
     private final int preparedRound;
-    private final String preparedValue;
+    private final Transaction preparedValue;
 
-    public RoundChangeMessage(Collection<ConsensusMessage> justification, int preparedRound, String preparedValue) {
+    public RoundChangeMessage(Collection<ConsensusMessage> justification, int preparedRound, Transaction preparedValue) {
         this.justification = justification;
         this.preparedRound = preparedRound;
         this.preparedValue = preparedValue;
@@ -22,7 +23,7 @@ public class RoundChangeMessage {
         return preparedRound;
     }
 
-    public String getPreparedValue() {
+    public Transaction getPreparedValue() {
         return preparedValue;
     }
 

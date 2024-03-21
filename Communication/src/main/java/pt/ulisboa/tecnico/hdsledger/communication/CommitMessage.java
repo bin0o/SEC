@@ -1,17 +1,18 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
+import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
 
 public class CommitMessage {
 
     // Value
-    private String value;
+    private Transaction value;
 
-    public CommitMessage(String value) {
+    public CommitMessage(Transaction value) {
         this.value = value;
     }
 
-    public String getValue() {
+    public Transaction getValue() {
         return value;
     }
 

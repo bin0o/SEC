@@ -1,20 +1,21 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
+import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
 
 public class AppendMessage {
-    private final String value;
+    private final Transaction value;
 
     private final String justification;
 
-    public AppendMessage(String value, String justification) {
+    public AppendMessage(Transaction value, String justification) {
         this.value = value;
         this.justification = justification;
     }
 
     public String getJustification() { return justification; }
 
-    public String getValue() {
+    public Transaction getValue() {
         return value;
     }
 

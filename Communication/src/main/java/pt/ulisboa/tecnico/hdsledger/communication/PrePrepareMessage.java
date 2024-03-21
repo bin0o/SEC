@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
+import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
 
 import java.util.Collection;
 import java.util.List;
@@ -8,11 +9,11 @@ import java.util.List;
 public class PrePrepareMessage {
     
     // Value
-    private String value;
+    private Transaction value;
     private String signature;
     private Collection<ConsensusMessage> justification;
 
-    public PrePrepareMessage(String value) {
+    public PrePrepareMessage(Transaction value) {
         this.value = value;
     }
 
@@ -27,7 +28,7 @@ public class PrePrepareMessage {
     public String getSignature() {
         return signature;
     }
-    public String getValue() {
+    public Transaction getValue() {
         return value;
     }
 

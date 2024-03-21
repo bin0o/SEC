@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
+import java.lang.annotation.Target;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -79,7 +80,7 @@ public class MessageBucket {
         }
     }
 
-    private String deserializeFrequencyValue(ConsensusMessage message) {
+    private Transaction deserializeFrequencyValue(ConsensusMessage message) {
         switch (message.getType()) {
             case PREPARE -> {
                 return message.deserializePrepareMessage().getValue();
@@ -91,17 +92,17 @@ public class MessageBucket {
         }
     }
 
-    public Optional<String> getValidQuorumValue(int instance, int round, MessageType type) {
+    public Optional<Transaction> getValidQuorumValue(int instance, int round, MessageType type) {
         // Create mapping of value to frequency
-        HashMap<String, Integer> frequency = new HashMap<>();
+        HashMap<Transaction, Integer> frequency = new HashMap<>();
         bucket.get(instance).get(round).get(type).values().forEach((message) -> {
-            String value = deserializeFrequencyValue(message);
+            Transaction value = deserializeFrequencyValue(message);
             frequency.put(value, frequency.getOrDefault(value, 0) + 1);
         });
 
         // Only one value (if any, thus the optional) will have a frequency
         // greater than or equal to the quorum size
-        return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
+        return frequency.entrySet().stream().filter((Map.Entry<Transaction, Integer> entry) -> {
             return entry.getValue() >= quorumSize;
         }).map(Map.Entry::getKey).findFirst();
     }
