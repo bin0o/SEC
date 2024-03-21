@@ -606,7 +606,7 @@ public class NodeService implements UDPService {
                                 case APPEND -> {
                                     ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                                     AppendMessage appendMessage = consensusMessage.deserializeStartMessage();
-                                    //o outro tmb tem de assinar
+                                    // TODO o outro tmb tem de assinar
                                     startConsensus(appendMessage.getValue(), appendMessage.getJustification(), message.getSenderId());
                                 }
 

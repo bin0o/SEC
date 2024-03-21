@@ -21,12 +21,12 @@ public class ClientService {
     private final ProcessConfig clientConfig;
     private final Link link;
     private final PrivateKey privateKey;
-    private final Map<String, DecideMessage> receivedMessages = new ConcurrentHashMap<>();
+    private final Map<Transaction, DecideMessage> receivedMessages = new ConcurrentHashMap<>();
     private final GlobalConfig config;
     private final int f;
 
     // Create mapping of value to frequency
-    HashMap<String, Integer> frequency = new HashMap<>();
+    HashMap<Transaction, Integer> frequency = new HashMap<>();
     ExecutorService threadpool = Executors.newCachedThreadPool();
 
     public ClientService(GlobalConfig config, Link link) {
@@ -58,7 +58,7 @@ public class ClientService {
         () -> {
           LOGGER.log(Level.INFO, "Waiting for DECIDE responses...");
 
-          Optional<String> value = Optional.empty();
+          Optional<Transaction> value = Optional.empty();
 
           while (value.isEmpty()) {
             Thread.sleep(500);
@@ -93,8 +93,8 @@ public class ClientService {
         return CryptoUtils.generateSignature(value.toString().getBytes(), this.privateKey);
     }
 
-    private Optional<String> checkFPlusOne() {
-        for (Map.Entry<String, Integer> freq : frequency.entrySet()) {
+    private Optional<Transaction> checkFPlusOne() {
+        for (Map.Entry<Transaction, Integer> freq : frequency.entrySet()) {
             if (freq.getValue() >= f + 1) {
                 return Optional.of(freq.getKey());
             }
@@ -112,7 +112,7 @@ public class ClientService {
                     switch (message.getType()) {
                         case DECIDE -> {
                             ConsensusMessage consensusMessage = ((ConsensusMessage) message);
-                            String value = consensusMessage.deserializeDecideMessage().getValue();
+                            Transaction value = consensusMessage.deserializeDecideMessage().getValue();
                             receivedMessages.putIfAbsent(value, consensusMessage.deserializeDecideMessage());
 
 
