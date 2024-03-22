@@ -1,42 +1,43 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
-import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
+import pt.ulisboa.tecnico.hdsledger.common.models.Block;
+import pt.ulisboa.tecnico.hdsledger.common.models.Transaction;
 
 import java.util.Collection;
-import java.util.List;
 
 public class PrePrepareMessage {
-    
-    // Value
-    private Transaction value;
-    private String signature;
-    private Collection<ConsensusMessage> justification;
 
-    public PrePrepareMessage(Transaction value) {
-        this.value = value;
-    }
+  // Value
+  private final Block block;
+  private String signature;
+  private Collection<ConsensusMessage> justification;
 
-    public void setSignature(String signature) {
-        this.signature = signature;
-    }
+  public PrePrepareMessage(Block block) {
+    this.block = block;
+  }
 
-    public void setJustification(Collection<ConsensusMessage> justification) {
-        this.justification = justification;
-    }
+  public void setSignature(String signature) {
+    this.signature = signature;
+  }
 
-    public String getSignature() {
-        return signature;
-    }
-    public Transaction getValue() {
-        return value;
-    }
+  public void setJustification(Collection<ConsensusMessage> justification) {
+    this.justification = justification;
+  }
 
-    public Collection<ConsensusMessage> getJustification() {
-        return justification;
-    }
+  public String getSignature() {
+    return signature;
+  }
 
-    public String toJson() {
-        return new Gson().toJson(this);
-    }
-}   
+  public Block getBlock() {
+    return block;
+  }
+
+  public Collection<ConsensusMessage> getJustification() {
+    return justification;
+  }
+
+  public String toJson() {
+    return new Gson().toJson(this);
+  }
+}

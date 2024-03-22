@@ -3,42 +3,45 @@ package pt.ulisboa.tecnico.hdsledger.service;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.service.services.NodeService;
-import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
-import pt.ulisboa.tecnico.hdsledger.utilities.GlobalConfig;
+import pt.ulisboa.tecnico.hdsledger.common.CustomLogger;
+import pt.ulisboa.tecnico.hdsledger.common.GlobalConfig;
 
 import java.text.MessageFormat;
 import java.util.logging.Level;
 
 public class Node {
-    private static final CustomLogger LOGGER = new CustomLogger(Node.class.getName());
-    public static void main(String[] args) {
+  private static final CustomLogger LOGGER = new CustomLogger(Node.class.getName());
 
-        try {
-            // Command line arguments
-            String id = args[0];
-            String configPath = args[1];
+  public static void main(String[] args) {
 
-            GlobalConfig config = GlobalConfig.fromFile(configPath, id);
+    try {
+      // Command line arguments
+      String id = args[0];
+      String configPath = args[1];
 
-            LOGGER.log(Level.INFO, MessageFormat.format("{0} - Running at {1}:{2}; is leader: {3}",
-                    config.getCurrentNodeConfig().getId(),
-                    config.getCurrentNodeConfig().getHostname(),
-                    config.getCurrentNodeConfig().getPort(),
-                    config.isLeader(config.getCurrentNodeConfig().getId(), 1, 1)));
+      GlobalConfig config = GlobalConfig.fromFile(configPath, id);
 
-            // Abstraction to send and receive messages
-            Link linkToNodes = new Link(config, ConsensusMessage.class);
+      LOGGER.log(
+          Level.INFO,
+          MessageFormat.format(
+              "{0} - Running at {1}:{2}; is leader: {3}",
+              config.getCurrentNodeConfig().getId(),
+              config.getCurrentNodeConfig().getHostname(),
+              config.getCurrentNodeConfig().getPort(),
+              config.isLeader(config.getCurrentNodeConfig().getId(), 1, 1)));
 
-            // Services that implement listen from UDPService
-            NodeService nodeService = new NodeService(linkToNodes, config);
+      // Abstraction to send and receive messages
+      Link linkToNodes = new Link(config, ConsensusMessage.class);
 
-            nodeService.initializeIBFTTimer();
+      // Services that implement listen from UDPService
+      NodeService nodeService = new NodeService(linkToNodes, config);
 
-            nodeService.listen();
+      nodeService.initializeIBFTTimer();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+      nodeService.listen();
+
+    } catch (Exception e) {
+      e.printStackTrace();
     }
-
+  }
 }

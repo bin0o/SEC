@@ -1,85 +1,90 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
-import pt.ulisboa.tecnico.hdsledger.utilities.MessageType;
+import pt.ulisboa.tecnico.hdsledger.common.MessageType;
 
 public class ConsensusMessage extends Message {
 
-    // Consensus instance
-    private int consensusInstance;
-    // Round
-    private int round;
-    // Who sent the previous message
-    private String replyTo;
-    // Id of the previous message
-    private int replyToMessageId;
-    // Message (PREPREPARE, PREPARE, COMMIT)
-    private String message;
+  // Consensus instance
+  private int consensusInstance;
+  // Round
+  private int round;
+  // Who sent the previous message
+  private String replyTo;
+  // Id of the previous message
+  private int replyToMessageId;
+  // Message (PREPREPARE, PREPARE, COMMIT)
+  private String message;
 
-    public ConsensusMessage(String senderId, MessageType type) {
-        super(senderId, type);
-    }
-    public AppendMessage deserializeStartMessage() {
-        return new Gson().fromJson(this.message, AppendMessage.class);
-    }
+  public ConsensusMessage(String senderId, MessageType type) {
+    super(senderId, type);
+  }
 
-    public DecideMessage deserializeDecideMessage() {
-        return new Gson().fromJson(this.message, DecideMessage.class);
-    }
+  public AppendMessage deserializeStartMessage() {
+    return new Gson().fromJson(this.message, AppendMessage.class);
+  }
 
-    public RoundChangeMessage deserializeRoundChangeMessage()  {
-        return new Gson().fromJson(this.message, RoundChangeMessage.class);
-    }
+  public DecideMessage deserializeDecideMessage() {
+    return new Gson().fromJson(this.message, DecideMessage.class);
+  }
 
-    public PrePrepareMessage deserializePrePrepareMessage() {
-        return new Gson().fromJson(this.message, PrePrepareMessage.class);
-    }
+  public BalanceReply deserializeBalanceReply() {
+    return new Gson().fromJson(this.message, BalanceReply.class);
+  }
 
-    public PrepareMessage deserializePrepareMessage() {
-        return new Gson().fromJson(this.message, PrepareMessage.class);
-    }
+  public RoundChangeMessage deserializeRoundChangeMessage() {
+    return new Gson().fromJson(this.message, RoundChangeMessage.class);
+  }
 
-    public CommitMessage deserializeCommitMessage() {
-        return new Gson().fromJson(this.message, CommitMessage.class);
-    }
+  public PrePrepareMessage deserializePrePrepareMessage() {
+    return new Gson().fromJson(this.message, PrePrepareMessage.class);
+  }
 
-    public String getMessage() {
-        return message;
-    }
+  public PrepareMessage deserializePrepareMessage() {
+    return new Gson().fromJson(this.message, PrepareMessage.class);
+  }
 
-    public void setMessage(String message) {
-        this.message = message;
-    }
+  public CommitMessage deserializeCommitMessage() {
+    return new Gson().fromJson(this.message, CommitMessage.class);
+  }
 
-    public int getConsensusInstance() {
-        return consensusInstance;
-    }
+  public String getMessage() {
+    return message;
+  }
 
-    public void setConsensusInstance(int consensusInstance) {
-        this.consensusInstance = consensusInstance;
-    }
+  public void setMessage(String message) {
+    this.message = message;
+  }
 
-    public int getRound() {
-        return round;
-    }
+  public int getConsensusInstance() {
+    return consensusInstance;
+  }
 
-    public void setRound(int round) {
-        this.round = round;
-    }
+  public void setConsensusInstance(int consensusInstance) {
+    this.consensusInstance = consensusInstance;
+  }
 
-    public String getReplyTo() {
-        return replyTo;
-    }
+  public int getRound() {
+    return round;
+  }
 
-    public void setReplyTo(String replyTo) {
-        this.replyTo = replyTo;
-    }
+  public void setRound(int round) {
+    this.round = round;
+  }
 
-    public int getReplyToMessageId() {
-        return replyToMessageId;
-    }
+  public String getReplyTo() {
+    return replyTo;
+  }
 
-    public void setReplyToMessageId(int replyToMessageId) {
-        this.replyToMessageId = replyToMessageId;
-    }
+  public void setReplyTo(String replyTo) {
+    this.replyTo = replyTo;
+  }
+
+  public int getReplyToMessageId() {
+    return replyToMessageId;
+  }
+
+  public void setReplyToMessageId(int replyToMessageId) {
+    this.replyToMessageId = replyToMessageId;
+  }
 }

@@ -1,24 +1,21 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
-import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
-
-import java.util.concurrent.ThreadLocalRandom;
+import pt.ulisboa.tecnico.hdsledger.common.models.Block;
+import pt.ulisboa.tecnico.hdsledger.common.models.Transaction;
 
 public class PrepareMessage {
-    
-    // Value
-    private Transaction value;
+  private final Block block;
 
-    public PrepareMessage(Transaction value) {
-        this.value = value;
-    }
+  public PrepareMessage(Block block) {
+    this.block = block;
+  }
 
-    public Transaction getValue() {
-        return value;
-    }
+  public Block getBlock() {
+    return block;
+  }
 
-    public String toJson() {
-        return new Gson().toJson(this);
-    }
-}   
+  public String toJson() {
+    return new Gson().toJson(this);
+  }
+}

@@ -1,44 +1,48 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
-import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
+import pt.ulisboa.tecnico.hdsledger.common.models.Block;
+import pt.ulisboa.tecnico.hdsledger.common.models.Transaction;
 
 public class DecideMessage {
 
-    private final boolean confirmation;
+  private final boolean confirmation;
 
-    private final int index;
+  private final int index;
 
-    private final Transaction value;
+  private final Block value;
 
-    public DecideMessage(boolean confirmation, int index, Transaction value) {
-        this.confirmation = confirmation;
-        this.index = index;
-        this.value = value;
-    }
+  public DecideMessage(boolean confirmation, int index, Block value) {
+    this.confirmation = confirmation;
+    this.index = index;
+    this.value = value;
+  }
 
-    public boolean getConfirmation() {
-        return this.confirmation;
-    }
+  public boolean getConfirmation() {
+    return this.confirmation;
+  }
 
-    public int getIndex() {
-        return this.index;
-    }
+  public int getIndex() {
+    return this.index;
+  }
 
-    public Transaction getValue() {
-        return this.value;
-    }
+  public Block getValue() {
+    return this.value;
+  }
 
-    public String toJson() {
-        return new Gson().toJson(this);
-    }
+  public String toJson() {
+    return new Gson().toJson(this);
+  }
 
-    @Override
-    public String toString() {
-        return "AppendReplyMessage{" +
-                "confirmation=" + confirmation +
-                ", index=" + index +
-                ", value=" + value +
-                '}';
-    }
+  @Override
+  public String toString() {
+    return "AppendReplyMessage{"
+        + "confirmation="
+        + confirmation
+        + ", index="
+        + index
+        + ", value="
+        + value
+        + '}';
+  }
 }

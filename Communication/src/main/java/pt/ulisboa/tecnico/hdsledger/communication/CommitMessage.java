@@ -1,22 +1,21 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
-import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
+import pt.ulisboa.tecnico.hdsledger.common.models.Block;
+import pt.ulisboa.tecnico.hdsledger.common.models.Transaction;
 
 public class CommitMessage {
+  private final Block block;
 
-    // Value
-    private Transaction value;
+  public CommitMessage(Block block) {
+    this.block = block;
+  }
 
-    public CommitMessage(Transaction value) {
-        this.value = value;
-    }
+  public Block getBlock() {
+    return block;
+  }
 
-    public Transaction getValue() {
-        return value;
-    }
-
-    public String toJson() {
-        return new Gson().toJson(this);
-    }
+  public String toJson() {
+    return new Gson().toJson(this);
+  }
 }

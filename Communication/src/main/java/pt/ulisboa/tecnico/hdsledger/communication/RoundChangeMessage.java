@@ -1,33 +1,36 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
+
 import com.google.gson.Gson;
-import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
+import pt.ulisboa.tecnico.hdsledger.common.models.Block;
+import pt.ulisboa.tecnico.hdsledger.common.models.Transaction;
 
 import java.util.Collection;
-import java.util.List;
 
 public class RoundChangeMessage {
-    private final Collection<ConsensusMessage> justification;
-    private final int preparedRound;
-    private final Transaction preparedValue;
+  private final Collection<ConsensusMessage> justification;
+  private final int preparedRound;
+  private final Block preparedBlock;
 
-    public RoundChangeMessage(Collection<ConsensusMessage> justification, int preparedRound, Transaction preparedValue) {
-        this.justification = justification;
-        this.preparedRound = preparedRound;
-        this.preparedValue = preparedValue;
-    }
-    public Collection<ConsensusMessage> getJustification() {
-        return justification;
-    }
+  public RoundChangeMessage(
+      Collection<ConsensusMessage> justification, int preparedRound, Block preparedBlock) {
+    this.justification = justification;
+    this.preparedRound = preparedRound;
+    this.preparedBlock = preparedBlock;
+  }
 
-    public int getPreparedRound() {
-        return preparedRound;
-    }
+  public Collection<ConsensusMessage> getJustification() {
+    return justification;
+  }
 
-    public Transaction getPreparedValue() {
-        return preparedValue;
-    }
+  public int getPreparedRound() {
+    return preparedRound;
+  }
 
-    public String toJson() {
-        return new Gson().toJson(this);
-    }
+  public Block getPreparedValue() {
+    return preparedBlock;
+  }
+
+  public String toJson() {
+    return new Gson().toJson(this);
+  }
 }
