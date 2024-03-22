@@ -48,7 +48,7 @@ public class NodeService implements UDPService {
 
   private Block inputValue;
 
-  private String clientId;
+  private List<String> clientsId;
 
   // Ledger (for now, just a list of strings)
   private final ArrayList<Block> ledger = new ArrayList<Block>();
@@ -58,6 +58,8 @@ public class NodeService implements UDPService {
   private final Map<String, Account> accounts;
 
   private final List<Transaction> currentTransactions;
+
+  private final List<String> currentClients;
 
   private final Set<String> invalidTransactionsSignatures = new HashSet<>();
 
@@ -70,6 +72,7 @@ public class NodeService implements UDPService {
     this.messages = new MessageBucket(config.getServers().size());
     this.accounts = new HashMap<>();
     this.currentTransactions = new ArrayList<>();
+    this.currentClients = new ArrayList<>();
 
     initAccounts();
   }
@@ -95,11 +98,8 @@ public class NodeService implements UDPService {
   }
 
   public ConsensusMessage createConsensusMessage(
-      Block value, String signedValue, int instance, int round) {
+      Block value, int instance, int round) {
     PrePrepareMessage prePrepareMessage = new PrePrepareMessage(value);
-
-    // TODO: Should we do this? (uponAppend)
-    prePrepareMessage.setSignature(signedValue);
 
     ConsensusMessage consensusMessage =
         new ConsensusMessageBuilder(current.getId(), MessageType.PRE_PREPARE)
@@ -123,15 +123,15 @@ public class NodeService implements UDPService {
    *
    * @param inputValue Value to value agreed upon
    */
-  public void startConsensus(Block value, String signedValue, String clientId) {
+  public void startConsensus(Block value, List<String> clientsId) {
 
     // Set initial consensus values
     this.inputValue = value;
     int localConsensusInstance = this.consensusInstance.incrementAndGet();
-    this.clientId = clientId;
+    this.clientsId = clientsId;
     InstanceInfo existingConsensus =
         this.instanceInfo.put(
-            localConsensusInstance, new InstanceInfo(value, clientId, config.getRoundTime()));
+            localConsensusInstance, new InstanceInfo(value, clientsId, config.getRoundTime()));
 
     // If startConsensus was already called for a given round
     if (existingConsensus != null) {
@@ -172,7 +172,7 @@ public class NodeService implements UDPService {
       // criar block
       this.link.broadcast(
           this.createConsensusMessage(
-              value, signedValue, localConsensusInstance, instance.getCurrentRound()));
+              value, localConsensusInstance, instance.getCurrentRound()));
     } else {
       LOGGER.log(
           Level.INFO,
@@ -197,6 +197,7 @@ public class NodeService implements UDPService {
 
     LOGGER.log(Level.INFO, "Transaction appended");
     this.currentTransactions.add(tx);
+    this.currentClients.add(message.getSenderId());
 
     String previousBlockHash = null;
 
@@ -204,24 +205,14 @@ public class NodeService implements UDPService {
       previousBlockHash = this.ledger.get(this.ledger.size() - 1).getHash();
     }
 
-    if (this.currentTransactions.size() >= 1) {
+    if (this.currentTransactions.size() == 1) {
 
+      List<String> tempClientIds = new ArrayList<>(currentClients);
       Block block = new Block(this.currentTransactions, previousBlockHash);
       this.currentTransactions.clear();
+      this.currentClients.clear();
 
-      String content = new Gson().toJson(block);
-
-      String signature =
-          CryptoUtils.generateSignature(content.getBytes(), this.link.getPrivateKey());
-
-      // LOGGER.log(Level.INFO, MessageFormat.format("[DEBUG-SIGNATURE-GEN]: Content: {0}",
-      // content));
-      // LOGGER.log(Level.INFO, MessageFormat.format("[DEBUG-SIGNATURE-GEN]: Signature: {0}",
-      // signature));
-
-      // TODO: Should we really do this? The Authenticated
-      //  Link abstraction already signs the Pre-Prepare message
-      startConsensus(block, signature, message.getSenderId());
+      startConsensus(block, tempClientIds);
     }
   }
 
@@ -273,17 +264,11 @@ public class NodeService implements UDPService {
     String senderId = message.getSenderId();
     int senderMessageId = message.getMessageId();
 
-    PublicKey publicKey =
-        this.config
-            .getNodeConfig(this.instanceInfo.get(consensusInstance).getClientId())
-            .getPublicKey();
-
     PrePrepareMessage prePrepareMessage = message.deserializePrePrepareMessage();
 
     Block value = prePrepareMessage.getBlock();
-    String signedValue = prePrepareMessage.getSignature();
 
-    LOGGER.log(Level.INFO, "PrePrepare value was indeed from client ---- verification successful");
+
 
     LOGGER.log(
         Level.INFO,
@@ -294,10 +279,19 @@ public class NodeService implements UDPService {
     // Verify if pre-prepare was sent by leader
     if (!this.config.isLeader(senderId, consensusInstance, round)) return;
 
-    if (round == 1 && !verifyAuth(value, signedValue, publicKey)) {
-      LOGGER.log(Level.INFO, "PrePrepare value not proposed by client");
-      return;
+
+    for (Transaction tx : value.getTransaction()) {
+
+      // I still have to validate the transaction because the leader can alter the signature and our Transaction Black List won't notice but the transaction still is invalid
+      // TODO: Maybe better to do White List, and then we check if the signature is there?
+      // TODO: Check previous if previous hash is compatible
+      if (invalidTransactionsSignatures.contains(tx.getSignature()) && !isValidTransaction(tx)) {
+        LOGGER.log(Level.INFO, MessageFormat.format("Invalid transaction!: {0}",tx.toString()));
+        return;
+      }
     }
+
+    LOGGER.log(Level.INFO, "Transactions are valid");
 
     if (!justifyPrePrepare(round, message)) {
       LOGGER.log(Level.INFO, "PrePrepare isn't justified, ignored");
@@ -306,7 +300,7 @@ public class NodeService implements UDPService {
 
     // Set instance value
     this.instanceInfo.putIfAbsent(
-        consensusInstance, new InstanceInfo(value, this.clientId, config.getRoundTime()));
+        consensusInstance, new InstanceInfo(value, this.clientsId, config.getRoundTime()));
 
     // Within an instance of the algorithm, each upon rule is triggered at most once
     // for any round r
@@ -372,7 +366,7 @@ public class NodeService implements UDPService {
 
     // Set instance values
     this.instanceInfo.putIfAbsent(
-        consensusInstance, new InstanceInfo(value, this.clientId, config.getRoundTime()));
+        consensusInstance, new InstanceInfo(value, this.clientsId, config.getRoundTime()));
     InstanceInfo instance = this.instanceInfo.get(consensusInstance);
 
     // Within an instance of the algorithm, each upon rule is triggered at most once
@@ -411,10 +405,6 @@ public class NodeService implements UDPService {
     Optional<Block> preparedValue =
         messages.getValidQuorumValue(consensusInstance, round, MessageType.PREPARE);
 
-    LOGGER.log(
-        Level.INFO,
-        MessageFormat.format(
-            "[UPON_PREPARE] preparedValue is present: {0}", preparedValue.isPresent()));
     LOGGER.log(
         Level.INFO,
         MessageFormat.format(
@@ -605,7 +595,7 @@ public class NodeService implements UDPService {
 
         LOGGER.log(
             Level.INFO,
-            MessageFormat.format("{0} - Replying to {1}", current.getId(), info.getClientId()));
+            MessageFormat.format("{0} - Replying to {1}", current.getId(), info.getClientsId()));
 
         if (config.dropMessage(consensusInstance, MessageType.DECIDE)) return;
 
@@ -618,7 +608,10 @@ public class NodeService implements UDPService {
                 MessageType.DECIDE,
                 DecideMessage.class,
                 (new DecideMessage(true, consensusInstance - 1, value)).toJson()));
-        this.link.send(info.getClientId(), serviceMessage);
+
+        for (String clientID : info.getClientsId()) {
+          this.link.send(clientID, serviceMessage);
+        }
       }
     }
   }

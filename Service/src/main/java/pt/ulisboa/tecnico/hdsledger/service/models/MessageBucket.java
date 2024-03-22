@@ -98,6 +98,7 @@ public class MessageBucket {
   public Optional<Block> getValidQuorumValue(int instance, int round, MessageType type) {
     // Create mapping of value to frequency
     HashMap<Block, Integer> frequency = new HashMap<>();
+    LOGGER.log(Level.INFO, MessageFormat.format("PREPARE BUCKET: {0}",new Gson().toJson(getMessages(instance,round,MessageType.PREPARE))));
     bucket
         .get(instance)
         .get(round)
@@ -106,6 +107,14 @@ public class MessageBucket {
         .forEach(
             (message) -> {
               Block value = deserializeFrequencyValue(message);
+              if (frequency.containsKey(value)) {
+                LOGGER.log(
+                        Level.INFO,"[GET VALID PREPARE QUORUM] Value is equal, incrementing frequency");
+              }
+              else{
+                LOGGER.log(
+                        Level.INFO,"[GET VALID PREPARE QUORUM] New value. THIS BLOCK WAS NOT IN ANY OF THE PREVIOUS PREPARE MESSAGES (ERROR)");
+              }
               frequency.put(value, frequency.getOrDefault(value, 0) + 1);
             });
 

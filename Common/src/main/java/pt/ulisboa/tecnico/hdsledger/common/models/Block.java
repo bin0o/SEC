@@ -45,6 +45,14 @@ public class Block {
     return Base64.getEncoder().encodeToString(bytes);
   }
 
+  public List<Transaction> getTransaction() {
+    return transaction;
+  }
+
+  public String getPreviousBlockHash() {
+    return previousBlockHash;
+  }
+
   @Override
   public String toString() {
     return "Block{"

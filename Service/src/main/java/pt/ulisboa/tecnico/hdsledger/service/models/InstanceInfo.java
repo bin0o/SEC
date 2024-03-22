@@ -5,6 +5,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 
 import java.util.Collection;
+import java.util.List;
 
 public class InstanceInfo {
 
@@ -18,7 +19,7 @@ public class InstanceInfo {
 
   private Collection<ConsensusMessage> preparedJustificationMessage;
 
-  private String clientId;
+  private List<String> clientsId;
 
   private int committedRound = -1;
 
@@ -38,18 +39,18 @@ public class InstanceInfo {
     this.timer = timer;
   }
 
-  public InstanceInfo(Block inputValue, String clientId, Integer timer) {
+  public InstanceInfo(Block inputValue, List<String> clientsId, Integer timer) {
     this.inputValue = inputValue;
-    this.clientId = clientId;
+    this.clientsId = clientsId;
     this.timer = timer;
   }
 
-  public String getClientId() {
-    return clientId;
+  public List<String> getClientsId() {
+    return clientsId;
   }
 
-  public void setClientId(String clientId) {
-    this.clientId = clientId;
+  public void setClientId(List<String> clientsId) {
+    this.clientsId = clientsId;
   }
 
   public int getCurrentRound() {
