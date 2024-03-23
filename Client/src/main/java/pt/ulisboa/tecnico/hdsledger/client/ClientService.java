@@ -25,15 +25,12 @@ public class ClientService {
   private final ProcessConfig clientConfig;
   private final Link link;
   private final PrivateKey privateKey;
-  private final Map<Block, DecideMessage> receivedMessages = new ConcurrentHashMap<>();
-  private final Map<Integer, BalanceReply> receivedMessagesBalance = new ConcurrentHashMap<>();
+  private final Map<String, Object> receivedMessages = new ConcurrentHashMap<>();
   private final GlobalConfig config;
   private final int f;
 
   // Create mapping of value to frequency
-  HashMap<Block, Integer> frequencyTransfer = new HashMap<>();
-
-  HashMap<Integer, Integer> frequencyBalance = new HashMap<>();
+  HashMap<String, Integer> frequency = new HashMap<>();
   ExecutorService threadpool = Executors.newCachedThreadPool();
 
   public ClientService(GlobalConfig config, Link link) {
@@ -61,17 +58,16 @@ public class ClientService {
     }
   }
 
-  public Future<DecideMessage> awaitDecideTransfer() {
+  public Future<Object> awaitDecide() {
     return threadpool.submit(
         () -> {
           LOGGER.log(Level.INFO, "Waiting for DECIDE responses...");
 
-          Optional<Block> value = Optional.empty();
+          Optional<String> value = Optional.empty();
           while (value.isEmpty()) {
             Thread.sleep(500);
-            value = checkFPlusOneTransfer();
+            value = checkFPlusOne();
           }
-
           LOGGER.log(Level.INFO, MessageFormat.format("Value: {0}", value.get()));
           LOGGER.log(
               Level.INFO,
@@ -82,101 +78,67 @@ public class ClientService {
         });
   }
 
-  public Future<BalanceReply> awaitDecideCheckBalance() {
-    return threadpool.submit(
-        () -> {
-          LOGGER.log(Level.INFO, "Waiting for Check_Balance responses...");
-
-          Optional<Integer> value = Optional.empty();
-
-          while (value.isEmpty()) {
-            Thread.sleep(500);
-            value = checkFPlusOneCheckBalance();
-          }
-
-          LOGGER.log(Level.INFO, MessageFormat.format("Value: {0}", value.get()));
-          LOGGER.log(
-              Level.INFO,
-              MessageFormat.format(
-                  "Received Messages: {0}", (new Gson()).toJson(receivedMessagesBalance)));
-
-          return receivedMessagesBalance.get(value.get());
-        });
-  }
-
   public DecideMessage append(Transaction value) throws ExecutionException, InterruptedException {
     ConsensusMessage serviceMessage =
         new ConsensusMessage(clientConfig.getId(), MessageType.APPEND);
     serviceMessage.setMessage((new AppendMessage(value)).toJson());
     this.link.broadcast(serviceMessage);
 
-    frequencyTransfer.clear();
+    frequency.clear();
     receivedMessages.clear();
 
-    Future<DecideMessage> decide = awaitDecideTransfer();
+    Future<Object> decide = awaitDecide();
 
     while (!decide.isDone()) {}
 
-    return decide.get();
+    if (decide.get() instanceof DecideMessage) {
+      return (DecideMessage) decide.get();
+    } else {
+      return null;
+    }
   }
 
   public String authenticate(Transaction value) {
     return CryptoUtils.generateSignature(new Gson().toJson(value).getBytes(), this.privateKey);
   }
 
-  private Optional<Block> checkFPlusOneTransfer() {
-    for (Map.Entry<Block, Integer> freq : frequencyTransfer.entrySet()) {
+  private Optional<String> checkFPlusOne() {
+    for (Map.Entry<String, Integer> freq : frequency.entrySet()) {
       if (freq.getValue() >= f + 1) {
         return Optional.of(freq.getKey());
       }
     }
-    return Optional.empty();
-  }
 
-  private Optional<Integer> checkFPlusOneCheckBalance() {
-    for (Map.Entry<Integer, Integer> freq : frequencyBalance.entrySet()) {
-      if (freq.getValue() >= f + 1) {
-        return Optional.of(freq.getKey());
-      }
-    }
     return Optional.empty();
   }
 
   public Block transfer() {
     Scanner sc = new Scanner(System.in);
     int amount;
-    String destination;
-    PublicKey pubKey;
+    PublicKey pubKey = null;
 
     System.out.println("Transfer funds: ");
-
-    System.out.println("Available destinations: ");
+    System.out.println("--------------------------------");
+    System.out.println("Available destinations(Client IDs): ");
     System.out.println();
     this.config.getClients().stream()
         .filter((client) -> !client.getId().equals(clientConfig.getId()))
         .forEach(
             (client) -> {
-              System.out.println(client.getId());
-              System.out.println(
-                  Base64.getEncoder().encodeToString(client.getPublicKey().getEncoded()));
-              System.out.println();
+              System.out.println("    -- " + client.getId());
             });
-
-    // check if destination is a valid PublicKey
+    System.out.println("--------------------------------");
     while (true) {
-      System.out.print("Destination: ");
-      destination = sc.nextLine();
-      try {
-        byte[] publicBytes = Base64.getDecoder().decode(destination);
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        pubKey = keyFactory.generatePublic(keySpec);
+      System.out.print("Insert client ID for Destination: ");
+      ProcessConfig dest = this.config.getClientByID(sc.nextLine());
+      if (dest != null) {
+        pubKey = dest.getPublicKey();
         System.out.println();
         break;
-      } catch (Exception e) {
-        System.out.println();
       }
+      System.out.println();
     }
+
     // check if amount is a number
     while (true) {
       System.out.print("Amount: ");
@@ -204,14 +166,18 @@ public class ClientService {
         new ConsensusMessage(clientConfig.getId(), MessageType.CHECK_BALANCE);
     this.link.broadcast(serviceMessage);
 
-    frequencyBalance.clear();
-    receivedMessagesBalance.clear();
+    frequency.clear();
+    receivedMessages.clear();
 
-    Future<BalanceReply> decide = awaitDecideCheckBalance();
+    Future<Object> decide = awaitDecide();
 
     while (!decide.isDone()) {}
 
-    return decide.get();
+    if (decide.get() instanceof BalanceReply) {
+      return (BalanceReply) decide.get();
+    } else {
+      return null;
+    }
   }
 
   private void listen() {
@@ -227,16 +193,18 @@ public class ClientService {
                       ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                       Block value = consensusMessage.deserializeDecideMessage().getValue();
                       receivedMessages.putIfAbsent(
-                          value, consensusMessage.deserializeDecideMessage());
-
-                      frequencyTransfer.put(value, frequencyTransfer.getOrDefault(value, 0) + 1);
+                          value.getHash(), consensusMessage.deserializeDecideMessage());
+                      frequency.put(
+                          value.getHash(), frequency.getOrDefault(value.getHash(), 0) + 1);
                     }
                     case CHECK_BALANCE -> {
                       ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                       int value = consensusMessage.deserializeBalanceReply().getValue();
-                      receivedMessagesBalance.putIfAbsent(
-                          value, consensusMessage.deserializeBalanceReply());
-                      frequencyBalance.put(value, frequencyBalance.getOrDefault(value, 0) + 1);
+                      receivedMessages.putIfAbsent(
+                          String.valueOf(value), consensusMessage.deserializeDecideMessage());
+                      frequency.put(
+                          String.valueOf(value),
+                          frequency.getOrDefault(String.valueOf(value), 0) + 1);
                     }
                     default -> {}
                   }

@@ -22,6 +22,7 @@ import pt.ulisboa.tecnico.hdsledger.service.models.*;
 import pt.ulisboa.tecnico.hdsledger.common.*;
 
 import java.security.spec.X509EncodedKeySpec;
+import java.util.stream.Collectors;
 
 public class NodeService implements UDPService {
 
@@ -61,7 +62,7 @@ public class NodeService implements UDPService {
 
   private final List<String> currentClients;
 
-  private final Set<String> invalidTransactionsSignatures = new HashSet<>();
+  private final Set<String> validTransactionsSignatures = new HashSet<>();
 
   public NodeService(Link link, GlobalConfig config) {
 
@@ -97,8 +98,7 @@ public class NodeService implements UDPService {
     return this.ledger;
   }
 
-  public ConsensusMessage createConsensusMessage(
-      Block value, int instance, int round) {
+  public ConsensusMessage createConsensusMessage(Block value, int instance, int round) {
     PrePrepareMessage prePrepareMessage = new PrePrepareMessage(value);
 
     ConsensusMessage consensusMessage =
@@ -171,8 +171,7 @@ public class NodeService implements UDPService {
       if (config.dropMessage(localConsensusInstance, MessageType.PRE_PREPARE)) return;
       // criar block
       this.link.broadcast(
-          this.createConsensusMessage(
-              value, localConsensusInstance, instance.getCurrentRound()));
+          this.createConsensusMessage(value, localConsensusInstance, instance.getCurrentRound()));
     } else {
       LOGGER.log(
           Level.INFO,
@@ -188,12 +187,19 @@ public class NodeService implements UDPService {
 
     LOGGER.log(Level.INFO, MessageFormat.format("Received Transaction: {0}", tx));
 
-    if (!isValidTransaction(tx)) {
+    // Validate sender identity using pubkey
+    boolean isTrustedSender =
+        accounts.get(tx.getSource()).getClient().getId().equals(message.getSenderId());
+
+    if (!isValidTransaction(tx) || !isTrustedSender) {
       LOGGER.log(Level.INFO, "Invalid transaction!");
-      // For tracking invalid TXs in Pre-Prepare stage
-      invalidTransactionsSignatures.add(tx.getSignature());
       return;
     }
+
+    LOGGER.log(Level.INFO, MessageFormat.format("[APPEND] Transaction: {0}", tx));
+
+    // For tracking valid TXs in Pre-Prepare stage
+    validTransactionsSignatures.add(tx.getSignature());
 
     LOGGER.log(Level.INFO, "Transaction appended");
     this.currentTransactions.add(tx);
@@ -208,7 +214,7 @@ public class NodeService implements UDPService {
     if (this.currentTransactions.size() == 1) {
 
       List<String> tempClientIds = new ArrayList<>(currentClients);
-      Block block = new Block(this.currentTransactions, previousBlockHash);
+      Block block = new Block(new ArrayList<>(this.currentTransactions), previousBlockHash);
       this.currentTransactions.clear();
       this.currentClients.clear();
 
@@ -217,6 +223,7 @@ public class NodeService implements UDPService {
   }
 
   public boolean isValidTransaction(Transaction tx) {
+
     byte[] publicBytes = Base64.getDecoder().decode(tx.getSource());
     X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
     PublicKey source;
@@ -234,20 +241,52 @@ public class NodeService implements UDPService {
     return accounts.get(tx.getSource()).getBalance() >= amount && verifyAuth(tx, signature, source);
   }
 
-  // public boolean isValidBlock(Block block) {}
-
-  public boolean verifyAuth(Transaction value, String signature, PublicKey publicKey) {
-    return CryptoUtils.verifySignature(new Gson().toJson(value).getBytes(), signature, publicKey);
+  public Block getPreviousBlock() {
+    return getPreviousBlock(this.ledger.size());
   }
 
-  public boolean verifyAuth(Block value, String signature, PublicKey publicKey) {
-    //    LOGGER.log(
-    //        Level.INFO,
-    //        MessageFormat.format("[DEBUG-SIGNATURE-VALIDATE]: Content: {0}", new
-    // Gson().toJson(value)));
-    //    LOGGER.log(
-    //        Level.INFO, MessageFormat.format("[DEBUG-SIGNATURE-VALIDATE]: Signature: {0}",
-    // signature));
+  public Block getPreviousBlock(int fromIndex) {
+    if (this.ledger.isEmpty()) return null;
+    return this.ledger.get(fromIndex - 1);
+  }
+
+  public boolean isValidBlock(Block block, Block previousBlock) {
+
+    LOGGER.log(Level.INFO, MessageFormat.format("Validating Block: {0}", block.getHash()));
+
+    for (Transaction tx : block.getTransaction()) {
+
+      // TODO: Maybe better to do White List, and then we check if the signature is there?
+      // You're totally right! If we use a whitelist we only need to track all the valid signatures!
+
+      // Updates: We tried this way and everything is fucked up!
+      // Sometimes the other nodes are receiving the PRE-PREPARE message before APPEND
+      // Blocks are being rejected since the transactions signatures are not yet registered at the
+      // whitelist!
+
+      // TODO: IDK Maybe a sequencer? Or should we just wait for APPEND when receiving the
+      // PRE-PREPARE
+
+      LOGGER.log(Level.INFO, MessageFormat.format("- Validating TX: {0}", tx));
+
+      if (!validTransactionsSignatures.contains(tx.getSignature()) || !isValidTransaction(tx)) {
+        return false;
+      }
+    }
+
+    LOGGER.log(Level.INFO, MessageFormat.format("Previous Block: {0}", previousBlock));
+
+    // Check if the hash of the previous block is compatible
+    if (previousBlock != null) {
+      String expectedHash =
+          CryptoUtils.generateHash(previousBlock.getHash() + block.getTransaction().toString());
+      return expectedHash.equals(block.getHash());
+    }
+
+    return true;
+  }
+
+  public boolean verifyAuth(Transaction value, String signature, PublicKey publicKey) {
     return CryptoUtils.verifySignature(new Gson().toJson(value).getBytes(), signature, publicKey);
   }
 
@@ -268,8 +307,6 @@ public class NodeService implements UDPService {
 
     Block value = prePrepareMessage.getBlock();
 
-
-
     LOGGER.log(
         Level.INFO,
         MessageFormat.format(
@@ -279,24 +316,18 @@ public class NodeService implements UDPService {
     // Verify if pre-prepare was sent by leader
     if (!this.config.isLeader(senderId, consensusInstance, round)) return;
 
-
-    for (Transaction tx : value.getTransaction()) {
-
-      // I still have to validate the transaction because the leader can alter the signature and our Transaction Black List won't notice but the transaction still is invalid
-      // TODO: Maybe better to do White List, and then we check if the signature is there?
-      // TODO: Check previous if previous hash is compatible
-      if (invalidTransactionsSignatures.contains(tx.getSignature()) && !isValidTransaction(tx)) {
-        LOGGER.log(Level.INFO, MessageFormat.format("Invalid transaction!: {0}",tx.toString()));
-        return;
-      }
-    }
-
-    LOGGER.log(Level.INFO, "Transactions are valid");
-
     if (!justifyPrePrepare(round, message)) {
       LOGGER.log(Level.INFO, "PrePrepare isn't justified, ignored");
       return;
     }
+
+    // Validate block
+    if (!isValidBlock(value, getPreviousBlock())) {
+      LOGGER.log(Level.INFO, "Invalid block!");
+      return;
+    }
+
+    LOGGER.log(Level.INFO, "Block is valid");
 
     // Set instance value
     this.instanceInfo.putIfAbsent(
@@ -561,6 +592,11 @@ public class NodeService implements UDPService {
 
       Block value = commitValue.get();
 
+      // Double check that the block is valid before appending
+      // We have to do this before increasing the size of the ledger to avoid a potential
+      // previousBlock == null
+      if (!isValidBlock(value, getPreviousBlock())) return;
+
       // Append value to the ledger (must be synchronized to be thread-safe)
       synchronized (ledger) {
 
@@ -570,14 +606,13 @@ public class NodeService implements UDPService {
           ledger.add(new Block(null, null));
         }
 
-        // TODO verify blocks function
         ledger.add(consensusInstance - 1, value);
 
         LOGGER.log(
             Level.INFO,
             MessageFormat.format(
                 "{0} - Current Ledger: {1}",
-                current.getId(), String.join((CharSequence) "", (CharSequence) ledger)));
+                current.getId(), ledger.stream().map(Block::getHash).collect(Collectors.toList())));
       }
 
       lastDecidedConsensusInstance.getAndIncrement();
@@ -791,6 +826,22 @@ public class NodeService implements UDPService {
         });
   }
 
+  private void uponCheckBalance(ConsensusMessage message) {
+    String clientPublicKey =
+        Base64.getEncoder().encodeToString(this.current.getPublicKey().getEncoded());
+
+    int balance = this.accounts.get(clientPublicKey).getBalance();
+
+    ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
+    serviceMessage.setMessage(
+        config.tamperMessage(
+            message.getConsensusInstance(),
+            MessageType.CHECK_BALANCE,
+            BalanceReply.class,
+            (new BalanceReply(balance)).toJson()));
+    link.send(this.current.getId(), serviceMessage);
+  }
+
   @Override
   public void listen() {
     try {
@@ -821,6 +872,8 @@ public class NodeService implements UDPService {
                                             current.getId(), message.getSenderId()));
 
                                 case ROUND_CHANGE -> uponRoundChange((ConsensusMessage) message);
+
+                                case CHECK_BALANCE -> uponCheckBalance((ConsensusMessage) message);
 
                                 case IGNORE ->
                                     LOGGER.log(

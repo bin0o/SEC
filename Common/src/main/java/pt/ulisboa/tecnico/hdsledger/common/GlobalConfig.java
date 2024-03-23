@@ -213,4 +213,11 @@ public class GlobalConfig {
   public List<ProcessConfig> getClients() {
     return Arrays.stream(this.nodes).filter(ProcessConfig::isClient).toList();
   }
+
+  public ProcessConfig getClientByID(String clientId) {
+    return getClients().stream()
+        .filter(client -> client.getId().equals(clientId))
+        .findFirst()
+        .orElse(null);
+  }
 }

@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.common.models;
 
+import pt.ulisboa.tecnico.hdsledger.common.CryptoUtils;
 import pt.ulisboa.tecnico.hdsledger.common.models.Transaction;
 
 import java.security.MessageDigest;
@@ -34,15 +35,8 @@ public class Block {
     } else {
       dataToHash = previousBlockHash + transaction.toString();
     }
-    byte[] bytes = null;
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      bytes = digest.digest(dataToHash.getBytes(UTF_8));
-    } catch (NoSuchAlgorithmException ex) {
-      System.out.println(ex.getMessage());
-    }
 
-    return Base64.getEncoder().encodeToString(bytes);
+    return CryptoUtils.generateHash(dataToHash);
   }
 
   public List<Transaction> getTransaction() {

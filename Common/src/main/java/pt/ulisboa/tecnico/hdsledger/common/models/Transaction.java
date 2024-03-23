@@ -36,7 +36,7 @@ public class Transaction {
   }
 
   public String getSignature() {
-    return signature;
+    return String.valueOf(signature);
   }
 
   @Override

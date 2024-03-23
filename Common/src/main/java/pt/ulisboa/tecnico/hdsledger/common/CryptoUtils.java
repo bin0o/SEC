@@ -7,6 +7,8 @@ import java.text.MessageFormat;
 import java.util.Base64;
 import java.util.logging.Level;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class CryptoUtils {
 
   private static final CustomLogger LOGGER = new CustomLogger(CryptoUtils.class.getName());
@@ -43,6 +45,17 @@ public class CryptoUtils {
     }
   }
 
+  public static String generateHash(String data) {
+    byte[] bytes = null;
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      bytes = digest.digest(data.getBytes(UTF_8));
+    } catch (NoSuchAlgorithmException ex) {
+      System.out.println(ex.getMessage());
+    }
+    return Base64.getEncoder().encodeToString(bytes);
+  }
+
   public static String generateSignature(byte[] data, PrivateKey privateKey) {
     try {
       Signature signature = Signature.getInstance("SHA256withRSA");
@@ -59,6 +72,7 @@ public class CryptoUtils {
 
   public static boolean verifySignature(
       byte[] data, String incomingSignature, PublicKey publicKey) {
+
     try {
       Signature signature = Signature.getInstance("SHA256withRSA");
       signature.initVerify(publicKey);

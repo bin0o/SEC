@@ -83,13 +83,15 @@ public class Client {
           case 1:
             LOGGER.log(
                 Level.INFO,
-                MessageFormat.format("Received: {0}", clientService.checkBalance().toString()));
-            clientService.checkBalance();
+                MessageFormat.format(
+                    "Account Balance: {0}", clientService.checkBalance().getValue()));
             break;
           case 2:
             LOGGER.log(
                 Level.INFO,
-                MessageFormat.format("Received: {0}", clientService.transfer().toString()));
+                MessageFormat.format(
+                    "Transaction Successful:\n {0}",
+                    clientService.transfer().getTransaction().toString()));
             break;
           case 3:
             System.exit(0);
