@@ -18,6 +18,7 @@ import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class ClientService {
 
@@ -68,10 +69,6 @@ public class ClientService {
             Thread.sleep(500);
             value = checkFPlusOne();
           }
-          LOGGER.log(
-              Level.INFO,
-              MessageFormat.format(
-                  "Received Messages: {0}", (new Gson()).toJson(receivedMessages)));
 
           return receivedMessages.get(value.get());
         });
@@ -111,7 +108,7 @@ public class ClientService {
     return Optional.empty();
   }
 
-  public Block transfer() {
+  public void transfer() {
     Scanner sc = new Scanner(System.in);
     int amount;
     PublicKey pubKey = null;
@@ -157,11 +154,25 @@ public class ClientService {
     Transaction transaction = new Transaction(this.clientConfig.getPublicKey(), pubKey, amount);
     transaction.sign(authenticate(transaction));
     try {
-      return append(transaction).getValue();
+      List<Transaction> transactions =
+          append(transaction).getValue().getTransaction().stream()
+              .filter(
+                  (t) ->
+                      t.getSource()
+                          .equals(
+                              Base64.getEncoder()
+                                  .encodeToString(this.clientConfig.getPublicKey().getEncoded())))
+              .collect(Collectors.toList());
+      for (Transaction t : transactions) {
+        System.out.println("Transaction Successful:");
+        System.out.println("    amount: " + t.getAmount());
+        System.out.println(
+            "    destination: " + this.config.getClientByPubKey(t.getDestination()).getId());
+        System.out.println("------------------------------");
+      }
     } catch (Exception e) {
       System.out.println("Failed to send transaction");
     }
-    return null;
   }
 
   public BalanceReply checkBalance() throws ExecutionException, InterruptedException {

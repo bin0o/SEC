@@ -1,10 +1,12 @@
 package pt.ulisboa.tecnico.hdsledger.client;
 
+import pt.ulisboa.tecnico.hdsledger.common.models.Transaction;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.common.*;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 
 import java.text.MessageFormat;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
@@ -87,11 +89,7 @@ public class Client {
                     "Account Balance: {0}", clientService.checkBalance().getValue()));
             break;
           case 2:
-            LOGGER.log(
-                Level.INFO,
-                MessageFormat.format(
-                    "Transaction Successful:\n {0}",
-                    clientService.transfer().getTransaction().toString()));
+            clientService.transfer();
             break;
           case 3:
             System.exit(0);

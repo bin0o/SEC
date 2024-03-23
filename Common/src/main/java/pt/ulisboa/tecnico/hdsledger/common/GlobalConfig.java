@@ -220,4 +220,15 @@ public class GlobalConfig {
         .findFirst()
         .orElse(null);
   }
+
+  public ProcessConfig getClientByPubKey(String pubKey) {
+    return getClients().stream()
+        .filter(
+            client ->
+                Base64.getEncoder()
+                    .encodeToString(client.getPublicKey().getEncoded())
+                    .equals(pubKey))
+        .findFirst()
+        .orElse(null);
+  }
 }
