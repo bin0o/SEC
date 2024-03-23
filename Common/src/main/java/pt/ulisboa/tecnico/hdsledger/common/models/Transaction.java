@@ -19,6 +19,12 @@ public class Transaction {
     this.amount = amount;
   }
 
+  public Transaction(String source, String destination, Integer amount) {
+    this.source = source;
+    this.destination = destination;
+    this.amount = amount;
+  }
+
   public void sign(String sourceSignature) {
     this.signature = sourceSignature;
   }

@@ -62,7 +62,7 @@ public class NodeService implements UDPService {
 
   private final List<String> currentClients;
 
-  private final Set<String> validTransactionsSignatures = new HashSet<>();
+  private final Set<String> invalidTransactionsSignatures = new HashSet<>();
 
   public NodeService(Link link, GlobalConfig config) {
 
@@ -193,13 +193,12 @@ public class NodeService implements UDPService {
 
     if (!isValidTransaction(tx) || !isTrustedSender) {
       LOGGER.log(Level.INFO, "Invalid transaction!");
+      // For tracking invalid TXs in Pre-Prepare stage
+      invalidTransactionsSignatures.add(tx.getSignature());
       return;
     }
 
     LOGGER.log(Level.INFO, MessageFormat.format("[APPEND] Transaction: {0}", tx));
-
-    // For tracking valid TXs in Pre-Prepare stage
-    validTransactionsSignatures.add(tx.getSignature());
 
     LOGGER.log(Level.INFO, "Transaction appended");
     this.currentTransactions.add(tx);
@@ -223,22 +222,9 @@ public class NodeService implements UDPService {
   }
 
   public boolean isValidTransaction(Transaction tx) {
-
-    byte[] publicBytes = Base64.getDecoder().decode(tx.getSource());
-    X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
-    PublicKey source;
-
-    try {
-      KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-      source = keyFactory.generatePublic(keySpec);
-    } catch (Exception e) {
-      return false;
-    }
     Integer amount = tx.getAmount();
-    String signature = tx.getSignature();
-    tx.sign(null);
 
-    return accounts.get(tx.getSource()).getBalance() >= amount && verifyAuth(tx, signature, source);
+    return accounts.get(tx.getSource()).getBalance() >= amount && verifyTransactionSignature(tx);
   }
 
   public Block getPreviousBlock() {
@@ -269,7 +255,7 @@ public class NodeService implements UDPService {
 
       LOGGER.log(Level.INFO, MessageFormat.format("- Validating TX: {0}", tx));
 
-      if (!validTransactionsSignatures.contains(tx.getSignature()) || !isValidTransaction(tx)) {
+      if (invalidTransactionsSignatures.contains(tx.getSignature()) || !isValidTransaction(tx)) {
         return false;
       }
     }
@@ -286,8 +272,24 @@ public class NodeService implements UDPService {
     return true;
   }
 
-  public boolean verifyAuth(Transaction value, String signature, PublicKey publicKey) {
-    return CryptoUtils.verifySignature(new Gson().toJson(value).getBytes(), signature, publicKey);
+  public boolean verifyTransactionSignature(Transaction transaction) {
+
+    byte[] publicBytes = Base64.getDecoder().decode(transaction.getSource());
+    X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+    PublicKey source;
+
+    try {
+      KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+      source = keyFactory.generatePublic(keySpec);
+    } catch (Exception e) {
+      return false;
+    }
+
+
+    Transaction copy = new Transaction(transaction.getSource(), transaction.getDestination(), transaction.getAmount());
+    copy.sign(null);
+
+    return CryptoUtils.verifySignature(new Gson().toJson(copy).getBytes(), transaction.getSignature(), source);
   }
 
   /*
@@ -608,6 +610,11 @@ public class NodeService implements UDPService {
 
         ledger.add(consensusInstance - 1, value);
 
+        for (Transaction tx : value.getTransaction()) {
+          this.accounts.get(tx.getSource()).updateBalance(-tx.getAmount());
+          this.accounts.get(tx.getDestination()).updateBalance(tx.getAmount());
+        }
+
         LOGGER.log(
             Level.INFO,
             MessageFormat.format(
@@ -828,18 +835,14 @@ public class NodeService implements UDPService {
 
   private void uponCheckBalance(ConsensusMessage message) {
     String clientPublicKey =
-        Base64.getEncoder().encodeToString(this.current.getPublicKey().getEncoded());
+        Base64.getEncoder().encodeToString(this.config.getNodeConfig(message.getSenderId()).getPublicKey().getEncoded());
 
     int balance = this.accounts.get(clientPublicKey).getBalance();
-
-    ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
-    serviceMessage.setMessage(
-        config.tamperMessage(
-            message.getConsensusInstance(),
-            MessageType.CHECK_BALANCE,
-            BalanceReply.class,
-            (new BalanceReply(balance)).toJson()));
-    link.send(this.current.getId(), serviceMessage);
+    // TODO: Tamper was not working, so I removed it
+    ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.CHECK_BALANCE);
+    BalanceReply balanceMsg = new BalanceReply(balance);
+    serviceMessage.setMessage(balanceMsg.toJson());
+    link.send(message.getSenderId(), serviceMessage);
   }
 
   @Override

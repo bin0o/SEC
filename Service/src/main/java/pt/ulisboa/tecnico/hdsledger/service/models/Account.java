@@ -13,12 +13,8 @@ public class Account {
     this.client = client;
   }
 
-  public boolean updateBalance(Integer value) {
-    if (this.balance + value > 0 || value > 0) {
-      this.balance += value;
-      return true;
-    }
-    return false;
+  public void updateBalance(Integer value) {
+    this.balance += value;
   }
 
   public ProcessConfig getClient() {

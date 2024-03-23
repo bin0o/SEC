@@ -68,7 +68,6 @@ public class ClientService {
             Thread.sleep(500);
             value = checkFPlusOne();
           }
-          LOGGER.log(Level.INFO, MessageFormat.format("Value: {0}", value.get()));
           LOGGER.log(
               Level.INFO,
               MessageFormat.format(
@@ -145,6 +144,10 @@ public class ClientService {
       try {
         amount = Integer.parseInt(sc.nextLine());
         System.out.println();
+        if (amount <= 0) {
+          System.out.println("Amount has to be a positive number different from zero");
+          continue;
+        }
         break;
       } catch (NumberFormatException e) {
         System.out.println();
@@ -201,7 +204,7 @@ public class ClientService {
                       ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                       int value = consensusMessage.deserializeBalanceReply().getValue();
                       receivedMessages.putIfAbsent(
-                          String.valueOf(value), consensusMessage.deserializeDecideMessage());
+                          String.valueOf(value), consensusMessage.deserializeBalanceReply());
                       frequency.put(
                           String.valueOf(value),
                           frequency.getOrDefault(String.valueOf(value), 0) + 1);
