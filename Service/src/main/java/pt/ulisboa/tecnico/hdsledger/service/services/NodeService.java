@@ -192,9 +192,29 @@ public class NodeService implements UDPService {
         accounts.get(tx.getSource()).getClient().getId().equals(message.getSenderId());
 
     if (!isValidTransaction(tx) || !isTrustedSender) {
-      LOGGER.log(Level.INFO, "Invalid transaction!");
       // For tracking invalid TXs in Pre-Prepare stage
       invalidTransactionsSignatures.add(tx.getSignature());
+
+      LOGGER.log(Level.INFO, MessageFormat.format("[Invalid Transaction] Sending message to client {0}", message.getSenderId()));
+
+
+      // Reply to the client with an invalidTransaction
+      ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
+      Transaction invalidTransaction = new Transaction(tx.getSource(),tx.getDestination(),-1);
+      List<Transaction> invalidTransactionList = new ArrayList<>();
+      invalidTransactionList.add(invalidTransaction);
+
+      // Had to create a new block because clientService checks frequency for the hash of blocks
+      Block block = new Block(invalidTransactionList,null);
+
+      serviceMessage.setMessage(
+              config.tamperMessage(
+                      consensusInstance.get(),
+                      MessageType.DECIDE,
+                      DecideMessage.class,
+                      (new DecideMessage(false, -1, block)).toJson()));
+
+      this.link.send(message.getSenderId(),serviceMessage);
       return;
     }
 

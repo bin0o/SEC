@@ -154,21 +154,30 @@ public class ClientService {
     Transaction transaction = new Transaction(this.clientConfig.getPublicKey(), pubKey, amount);
     transaction.sign(authenticate(transaction));
     try {
-      List<Transaction> transactions =
-          append(transaction).getValue().getTransaction().stream()
-              .filter(
-                  (t) ->
-                      t.getSource()
-                          .equals(
-                              Base64.getEncoder()
-                                  .encodeToString(this.clientConfig.getPublicKey().getEncoded())))
-              .collect(Collectors.toList());
-      for (Transaction t : transactions) {
-        System.out.println("Transaction Successful:");
-        System.out.println("    amount: " + t.getAmount());
-        System.out.println(
-            "    destination: " + this.config.getClientByPubKey(t.getDestination()).getId());
-        System.out.println("------------------------------");
+      DecideMessage decideMessage = append(transaction);
+
+      // trnsaction was not valid
+      if (!decideMessage.getConfirmation()) {
+        System.out.println("Transaction was NOT Valid");
+      }
+      // transaction successful
+      else {
+        List<Transaction> transactions =
+                decideMessage.getValue().getTransaction().stream()
+                        .filter(
+                                (t) ->
+                                        t.getSource()
+                                                .equals(
+                                                        Base64.getEncoder()
+                                                                .encodeToString(this.clientConfig.getPublicKey().getEncoded())))
+                        .collect(Collectors.toList());
+        for (Transaction t : transactions) {
+          System.out.println("Transaction Successful:");
+          System.out.println("    amount: " + t.getAmount());
+          System.out.println(
+                  "    destination: " + this.config.getClientByPubKey(t.getDestination()).getId());
+          System.out.println("------------------------------");
+        }
       }
     } catch (Exception e) {
       System.out.println("Failed to send transaction");
