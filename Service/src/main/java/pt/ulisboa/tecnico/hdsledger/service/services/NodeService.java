@@ -191,7 +191,8 @@ public class NodeService implements UDPService {
     // added verification for when consensus is happening but node receives a transaction
     while (lastDecidedConsensusInstance.get() < localConsensusInstance) {
       try {
-        LOGGER.log(Level.INFO, "There's a Consensus Instance already happening, WAIT for termination");
+        LOGGER.log(
+            Level.INFO, "There's a Consensus Instance already happening, WAIT for termination");
         Thread.sleep(1000);
       } catch (InterruptedException e) {
         e.printStackTrace();
@@ -206,26 +207,28 @@ public class NodeService implements UDPService {
       // For tracking invalid TXs in Pre-Prepare stage
       invalidTransactionsSignatures.add(tx.getSignature());
 
-      LOGGER.log(Level.INFO, MessageFormat.format("[Invalid Transaction] Sending message to client {0}", message.getSenderId()));
-
+      LOGGER.log(
+          Level.INFO,
+          MessageFormat.format(
+              "[Invalid Transaction] Sending message to client {0}", message.getSenderId()));
 
       // Reply to the client with an invalidTransaction
       ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
-      Transaction invalidTransaction = new Transaction(tx.getSource(),tx.getDestination(),-1);
+      Transaction invalidTransaction = new Transaction(tx.getSource(), tx.getDestination(), -1);
       List<Transaction> invalidTransactionList = new ArrayList<>();
       invalidTransactionList.add(invalidTransaction);
 
       // Had to create a new block because clientService checks frequency for the hash of blocks
-      Block block = new Block(invalidTransactionList,null);
+      Block block = new Block(invalidTransactionList, null);
 
       serviceMessage.setMessage(
-              config.tamperMessage(
-                      consensusInstance.get(),
-                      MessageType.DECIDE,
-                      DecideMessage.class,
-                      (new DecideMessage(false, -1, block)).toJson()));
+          config.tamperMessage(
+              consensusInstance.get(),
+              MessageType.DECIDE,
+              DecideMessage.class,
+              (new DecideMessage(false, -1, block)).toJson()));
 
-      this.link.send(message.getSenderId(),serviceMessage);
+      this.link.send(message.getSenderId(), serviceMessage);
       return;
     }
 
@@ -314,11 +317,13 @@ public class NodeService implements UDPService {
       return false;
     }
 
-
-    Transaction copy = new Transaction(transaction.getSource(), transaction.getDestination(), transaction.getAmount());
+    Transaction copy =
+        new Transaction(
+            transaction.getSource(), transaction.getDestination(), transaction.getAmount());
     copy.sign(null);
 
-    return CryptoUtils.verifySignature(new Gson().toJson(copy).getBytes(), transaction.getSignature(), source);
+    return CryptoUtils.verifySignature(
+        new Gson().toJson(copy).getBytes(), transaction.getSignature(), source);
   }
 
   /*
@@ -672,15 +677,16 @@ public class NodeService implements UDPService {
 
         LOGGER.log(Level.INFO, MessageFormat.format("[DECIDE] Value sent: {0}", value));
         // Reply to the guy who sent the transaction
-        ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
-        serviceMessage.setMessage(
-            config.tamperMessage(
-                consensusInstance,
-                MessageType.DECIDE,
-                DecideMessage.class,
-                (new DecideMessage(true, consensusInstance - 1, value)).toJson()));
 
         for (String clientID : info.getClientsId()) {
+          ConsensusMessage serviceMessage =
+              new ConsensusMessage(current.getId(), MessageType.DECIDE);
+          serviceMessage.setMessage(
+              config.tamperMessage(
+                  consensusInstance,
+                  MessageType.DECIDE,
+                  DecideMessage.class,
+                  (new DecideMessage(true, consensusInstance - 1, value)).toJson()));
           this.link.send(clientID, serviceMessage);
         }
       }
@@ -740,7 +746,8 @@ public class NodeService implements UDPService {
         prePrepare.deserializePrePrepareMessage().getJustification();
 
     if (rcMessages.isEmpty()) return false;
-    //LOGGER.log(Level.INFO,MessageFormat.format("[JUSTIFY PREPREPARE]: Quorum of RoundChangeMsg: {0}", new Gson().toJson(rcMessages)));
+    // LOGGER.log(Level.INFO,MessageFormat.format("[JUSTIFY PREPREPARE]: Quorum of RoundChangeMsg:
+    // {0}", new Gson().toJson(rcMessages)));
     ConsensusMessage highestRC = highestPrepared(rcMessages);
 
     if (highestRC == null) return true;
@@ -861,11 +868,14 @@ public class NodeService implements UDPService {
 
   private void uponCheckBalance(ConsensusMessage message) {
     String clientPublicKey =
-        Base64.getEncoder().encodeToString(this.config.getNodeConfig(message.getSenderId()).getPublicKey().getEncoded());
+        Base64.getEncoder()
+            .encodeToString(
+                this.config.getNodeConfig(message.getSenderId()).getPublicKey().getEncoded());
 
     int balance = this.accounts.get(clientPublicKey).getBalance();
     // TODO: Tamper was not working, so I removed it
-    ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.CHECK_BALANCE);
+    ConsensusMessage serviceMessage =
+        new ConsensusMessage(current.getId(), MessageType.CHECK_BALANCE);
     BalanceReply balanceMsg = new BalanceReply(balance);
     serviceMessage.setMessage(balanceMsg.toJson());
     link.send(message.getSenderId(), serviceMessage);

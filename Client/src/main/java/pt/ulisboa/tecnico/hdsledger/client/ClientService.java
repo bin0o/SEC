@@ -156,26 +156,26 @@ public class ClientService {
     try {
       DecideMessage decideMessage = append(transaction);
 
-      // trnsaction was not valid
+      // transaction was not valid
       if (!decideMessage.getConfirmation()) {
         System.out.println("Transaction was NOT Valid");
       }
       // transaction successful
       else {
         List<Transaction> transactions =
-                decideMessage.getValue().getTransaction().stream()
-                        .filter(
-                                (t) ->
-                                        t.getSource()
-                                                .equals(
-                                                        Base64.getEncoder()
-                                                                .encodeToString(this.clientConfig.getPublicKey().getEncoded())))
-                        .collect(Collectors.toList());
+            decideMessage.getValue().getTransaction().stream()
+                .filter(
+                    (t) ->
+                        t.getSource()
+                            .equals(
+                                Base64.getEncoder()
+                                    .encodeToString(this.clientConfig.getPublicKey().getEncoded())))
+                .collect(Collectors.toList());
         for (Transaction t : transactions) {
           System.out.println("Transaction Successful:");
           System.out.println("    amount: " + t.getAmount());
           System.out.println(
-                  "    destination: " + this.config.getClientByPubKey(t.getDestination()).getId());
+              "    destination: " + this.config.getClientByPubKey(t.getDestination()).getId());
           System.out.println("------------------------------");
         }
       }
