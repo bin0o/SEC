@@ -183,9 +183,20 @@ public class NodeService implements UDPService {
   public void uponAppend(ConsensusMessage message) {
     AppendMessage appendMessage = message.deserializeStartMessage();
 
+    int localConsensusInstance = this.consensusInstance.get();
     Transaction tx = appendMessage.getValue();
 
     LOGGER.log(Level.INFO, MessageFormat.format("Received Transaction: {0}", tx));
+
+    // added verification for when consensus is happening but node receives a transaction
+    while (lastDecidedConsensusInstance.get() < localConsensusInstance) {
+      try {
+        LOGGER.log(Level.INFO, "There's a Consensus Instance already happening, WAIT for termination");
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
 
     // Validate sender identity using pubkey
     boolean isTrustedSender =
@@ -219,8 +230,6 @@ public class NodeService implements UDPService {
     }
 
     LOGGER.log(Level.INFO, MessageFormat.format("[APPEND] Transaction: {0}", tx));
-
-    LOGGER.log(Level.INFO, "Transaction appended");
     this.currentTransactions.add(tx);
     this.currentClients.add(message.getSenderId());
 
@@ -230,7 +239,7 @@ public class NodeService implements UDPService {
       previousBlockHash = this.ledger.get(this.ledger.size() - 1).getHash();
     }
 
-    if (this.currentTransactions.size() == 1) {
+    if (this.currentTransactions.size() == 2) {
 
       List<String> tempClientIds = new ArrayList<>(currentClients);
       Block block = new Block(new ArrayList<>(this.currentTransactions), previousBlockHash);
@@ -662,7 +671,7 @@ public class NodeService implements UDPService {
         if (config.dropMessage(consensusInstance, MessageType.DECIDE)) return;
 
         LOGGER.log(Level.INFO, MessageFormat.format("[DECIDE] Value sent: {0}", value));
-        // Reply to the guy who appended the block
+        // Reply to the guy who sent the transaction
         ConsensusMessage serviceMessage = new ConsensusMessage(current.getId(), MessageType.DECIDE);
         serviceMessage.setMessage(
             config.tamperMessage(
@@ -731,10 +740,7 @@ public class NodeService implements UDPService {
         prePrepare.deserializePrePrepareMessage().getJustification();
 
     if (rcMessages.isEmpty()) return false;
-    LOGGER.log(
-        Level.INFO,
-        MessageFormat.format(
-            "[JUSTIFY PREPREPARE]: Quorum of RoundChangeMsg: {0}", new Gson().toJson(rcMessages)));
+    //LOGGER.log(Level.INFO,MessageFormat.format("[JUSTIFY PREPREPARE]: Quorum of RoundChangeMsg: {0}", new Gson().toJson(rcMessages)));
     ConsensusMessage highestRC = highestPrepared(rcMessages);
 
     if (highestRC == null) return true;

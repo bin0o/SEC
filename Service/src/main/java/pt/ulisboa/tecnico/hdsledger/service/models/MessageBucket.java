@@ -115,13 +115,9 @@ public class MessageBucket {
             (message) -> {
               Block block = deserializeFrequencyValue(message);
               if (frequency.containsKey(block.getHash())) {
-                LOGGER.log(
-                    Level.INFO,
-                    "[getValidQuorumValue]: [GET VALID PREPARE QUORUM] Value is equal, incrementing frequency");
+                //LOGGER.log(Level.INFO,"[getValidQuorumValue]: [GET VALID PREPARE QUORUM] Value is equal, incrementing frequency");
               } else {
-                LOGGER.log(
-                    Level.INFO,
-                    "[getValidQuorumValue]: [GET VALID PREPARE QUORUM] New value. THIS BLOCK WAS NOT IN ANY OF THE PREVIOUS PREPARE MESSAGES (ERROR)");
+               // LOGGER.log(Level.INFO, "[getValidQuorumValue]: [GET VALID PREPARE QUORUM] New value. THIS BLOCK WAS NOT IN ANY OF THE PREVIOUS PREPARE MESSAGES (ERROR)");
 
                 blocks.put(block.getHash(), block);
               }
@@ -149,8 +145,7 @@ public class MessageBucket {
           MessageFormat.format(
               "Failed to get {0} messages for instance {1}, round {2}",
               type.toString(), instance, round));
-      LOGGER.log(
-          Level.INFO, MessageFormat.format("Bucket content: {0}", (new Gson()).toJson(bucket)));
+      //LOGGER.log(Level.INFO, MessageFormat.format("Bucket content: {0}", (new Gson()).toJson(bucket)));
       return Optional.empty();
     }
 
