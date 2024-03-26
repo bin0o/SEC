@@ -114,13 +114,11 @@ public class MessageBucket {
         .forEach(
             (message) -> {
               Block block = deserializeFrequencyValue(message);
-              if (frequency.containsKey(block.getHash())) {
-                //LOGGER.log(Level.INFO,"[getValidQuorumValue]: [GET VALID PREPARE QUORUM] Value is equal, incrementing frequency");
-              } else {
-               // LOGGER.log(Level.INFO, "[getValidQuorumValue]: [GET VALID PREPARE QUORUM] New value. THIS BLOCK WAS NOT IN ANY OF THE PREVIOUS PREPARE MESSAGES (ERROR)");
 
-                blocks.put(block.getHash(), block);
-              }
+              // To prevent exception when there are no Prepare messages
+              if (block == null) return;
+              blocks.put(block.getHash(), block);
+
               frequency.put(block.getHash(), frequency.getOrDefault(block.getHash(), 0) + 1);
             });
 

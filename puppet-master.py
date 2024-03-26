@@ -16,7 +16,7 @@ if platform.system() == "Darwin":
 
 # Blockchain node configuration file name
 server_configs = [
-    "regular_config.json"
+    "test_2.json"
 ]
 
 server_config = server_configs[0]
