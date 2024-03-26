@@ -43,17 +43,22 @@
       "id": "7",
       "isClient": false,
       "hostname": "localhost",
-      "port": 3008
+      "port": 3007
     },
     {
       "id": "client1",
       "isClient": true,
       "hostname": "localhost",
-      "port": 3007
+      "port": 3008
+    },
+    {
+      "id": "client2",
+      "isClient": true,
+      "hostname": "localhost",
+      "port": 3009
     }
   ],
   "tests": [
-    [],
     [
       {
         "id": "1",
@@ -79,6 +84,7 @@
         }
       }
     ],
+    [],
     []
   ]
 }
