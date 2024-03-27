@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 
 public class NodeService implements UDPService {
 
+  private static final Integer BLOCK_SIZE = 2;
+
   private static final CustomLogger LOGGER = new CustomLogger(NodeService.class.getName());
 
   // Global configuration object
@@ -180,6 +182,22 @@ public class NodeService implements UDPService {
     }
   }
 
+  public float computeFee(Integer transactionAmount) {
+    // Minimum fee required to process a transaction
+    float baseFee = 1F;
+
+    // Maximum multiplier allowed
+    float maxMultiplier = 10.0F;
+
+    // Compute demand based on the number of pending transactions
+    float demand = (float) this.currentTransactions.size() / BLOCK_SIZE;
+
+    // Also consider transaction amount
+    float multiplier = 1.0F + demand + (transactionAmount / 100F);
+
+    return (baseFee * Math.min(multiplier, maxMultiplier));
+  }
+
   public void uponAppend(ConsensusMessage message) {
     AppendMessage appendMessage = message.deserializeStartMessage();
 
@@ -232,6 +250,8 @@ public class NodeService implements UDPService {
       return;
     }
 
+    tx.setFee(computeFee(tx.getAmount()));
+
     LOGGER.log(Level.INFO, MessageFormat.format("[APPEND] Transaction: {0}", tx));
     this.currentTransactions.add(tx);
     this.currentClients.add(message.getSenderId());
@@ -242,7 +262,7 @@ public class NodeService implements UDPService {
       previousBlockHash = this.ledger.get(this.ledger.size() - 1).getHash();
     }
 
-    if (this.currentTransactions.size() == 2) {
+    if (this.currentTransactions.size() == BLOCK_SIZE) {
 
       List<String> tempClientIds = new ArrayList<>(currentClients);
       Block block = new Block(new ArrayList<>(this.currentTransactions), previousBlockHash);
@@ -255,8 +275,10 @@ public class NodeService implements UDPService {
 
   public boolean isValidTransaction(Transaction tx) {
     Integer amount = tx.getAmount();
+    float fee = tx.getFee();
 
-    return accounts.get(tx.getSource()).getBalance() >= amount && verifyTransactionSignature(tx);
+    return accounts.get(tx.getSource()).getBalance() >= amount + fee
+        && verifyTransactionSignature(tx);
   }
 
   public Block getPreviousBlock() {
@@ -645,7 +667,9 @@ public class NodeService implements UDPService {
         ledger.add(consensusInstance - 1, value);
 
         for (Transaction tx : value.getTransaction()) {
-          this.accounts.get(tx.getSource()).updateBalance(-tx.getAmount());
+          float amountWithFee = tx.getAmount() + tx.getFee();
+
+          this.accounts.get(tx.getSource()).updateBalance(-amountWithFee);
           this.accounts.get(tx.getDestination()).updateBalance(tx.getAmount());
         }
 
@@ -872,8 +896,9 @@ public class NodeService implements UDPService {
             .encodeToString(
                 this.config.getNodeConfig(message.getSenderId()).getPublicKey().getEncoded());
 
-    int balance = this.accounts.get(clientPublicKey).getBalance();
+    float balance = this.accounts.get(clientPublicKey).getBalance();
     // TODO: Tamper was not working, so I removed it
+
     ConsensusMessage serviceMessage =
         new ConsensusMessage(current.getId(), MessageType.CHECK_BALANCE);
     BalanceReply balanceMsg = new BalanceReply(balance);
