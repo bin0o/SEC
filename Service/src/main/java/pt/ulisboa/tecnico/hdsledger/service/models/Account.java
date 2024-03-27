@@ -6,14 +6,14 @@ import java.security.PublicKey;
 
 public class Account {
   private final ProcessConfig client;
-  private Integer balance;
+  private Float balance;
 
   public Account(ProcessConfig client) {
-    this.balance = 100;
+    this.balance = 100F;
     this.client = client;
   }
 
-  public void updateBalance(Integer value) {
+  public void updateBalance(float value) {
     this.balance += value;
   }
 
@@ -21,7 +21,7 @@ public class Account {
     return client;
   }
 
-  public Integer getBalance() {
+  public Float getBalance() {
     return balance;
   }
 

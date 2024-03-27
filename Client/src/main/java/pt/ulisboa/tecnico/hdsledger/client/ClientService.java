@@ -147,6 +147,7 @@ public class ClientService {
         }
         break;
       } catch (NumberFormatException e) {
+        System.out.println("Invalid amount");
         System.out.println();
       }
     }
@@ -171,13 +172,19 @@ public class ClientService {
                                 Base64.getEncoder()
                                     .encodeToString(this.clientConfig.getPublicKey().getEncoded())))
                 .collect(Collectors.toList());
+
         for (Transaction t : transactions) {
-          System.out.println("Transaction Successful:");
-          System.out.println("    amount: " + t.getAmount());
+          System.out.println();
+          System.out.println("====== Transaction Successful ======");
           System.out.println(
-              "    destination: " + this.config.getClientByPubKey(t.getDestination()).getId());
-          System.out.println("------------------------------");
+              "Destination: " + this.config.getClientByPubKey(t.getDestination()).getId());
+          System.out.println("Amount: " + t.getAmount());
+          System.out.println("Fee: " + t.getFee());
+          System.out.println("------------------------------------");
+          System.out.println("Total: " + (t.getAmount() + t.getFee()));
+          System.out.println("------------------------------------");
         }
+        System.out.println();
       }
     } catch (Exception e) {
       System.out.println("Failed to send transaction");
@@ -222,7 +229,7 @@ public class ClientService {
                     }
                     case CHECK_BALANCE -> {
                       ConsensusMessage consensusMessage = ((ConsensusMessage) message);
-                      int value = consensusMessage.deserializeBalanceReply().getValue();
+                      float value = consensusMessage.deserializeBalanceReply().getValue();
                       receivedMessages.putIfAbsent(
                           String.valueOf(value), consensusMessage.deserializeBalanceReply());
                       frequency.put(

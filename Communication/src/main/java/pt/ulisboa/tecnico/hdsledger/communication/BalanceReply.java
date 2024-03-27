@@ -3,13 +3,13 @@ package pt.ulisboa.tecnico.hdsledger.communication;
 import com.google.gson.Gson;
 
 public class BalanceReply {
-  private final int value;
+  private final float value;
 
-  public BalanceReply(int value) {
+  public BalanceReply(float value) {
     this.value = value;
   }
 
-  public int getValue() {
+  public float getValue() {
     return this.value;
   }
 
