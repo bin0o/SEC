@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 public class NodeService implements UDPService {
 
-  private static final Integer BLOCK_SIZE = 2;
+  private static final Integer BLOCK_SIZE = 1;
 
   private static final CustomLogger LOGGER = new CustomLogger(NodeService.class.getName());
 
@@ -201,13 +201,13 @@ public class NodeService implements UDPService {
   public void uponAppend(ConsensusMessage message) {
     AppendMessage appendMessage = message.deserializeStartMessage();
 
-    int localConsensusInstance = this.consensusInstance.get();
+    int localConsensusInstance = this.consensusInstance.get() + 1;
     Transaction tx = appendMessage.getValue();
 
     LOGGER.log(Level.INFO, MessageFormat.format("Received Transaction: {0}", tx));
 
     // added verification for when consensus is happening but node receives a transaction
-    while (lastDecidedConsensusInstance.get() < localConsensusInstance) {
+    while (lastDecidedConsensusInstance.get() < localConsensusInstance - 1) {
       try {
         LOGGER.log(
             Level.INFO, "There's a Consensus Instance already happening, WAIT for termination");
@@ -220,6 +220,8 @@ public class NodeService implements UDPService {
     // Validate sender identity using pubkey
     boolean isTrustedSender =
         accounts.get(tx.getSource()).getClient().getId().equals(message.getSenderId());
+
+    tx.setFee(computeFee(tx.getAmount()));
 
     if (!isValidTransaction(tx) || !isTrustedSender) {
       // For tracking invalid TXs in Pre-Prepare stage
@@ -241,7 +243,7 @@ public class NodeService implements UDPService {
 
       serviceMessage.setMessage(
           config.tamperMessage(
-              consensusInstance.get(),
+              localConsensusInstance,
               MessageType.DECIDE,
               DecideMessage.class,
               (new DecideMessage(false, -1, block)).toJson()));
@@ -250,7 +252,6 @@ public class NodeService implements UDPService {
       return;
     }
 
-    tx.setFee(computeFee(tx.getAmount()));
 
     LOGGER.log(Level.INFO, MessageFormat.format("[APPEND] Transaction: {0}", tx));
     this.currentTransactions.add(tx);
