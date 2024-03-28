@@ -29,6 +29,7 @@ public class ClientService {
   private final Map<String, Object> receivedMessages = new ConcurrentHashMap<>();
   private final GlobalConfig config;
   private final int f;
+  private Integer consensusInstance;
 
   // Create mapping of value to frequency
   HashMap<String, Integer> frequency = new HashMap<>();
@@ -38,6 +39,7 @@ public class ClientService {
     this.clientConfig = config.getCurrentNodeConfig();
     this.link = link;
     this.config = config;
+    this.consensusInstance = 1;
 
     this.f = Math.floorDiv(config.getNodesConfigs().length - 1, 3);
 
@@ -77,7 +79,10 @@ public class ClientService {
   public DecideMessage append(Transaction value) throws ExecutionException, InterruptedException {
     ConsensusMessage serviceMessage =
         new ConsensusMessage(clientConfig.getId(), MessageType.APPEND);
-    serviceMessage.setMessage((new AppendMessage(value)).toJson());
+
+    serviceMessage.setMessage(this.config.tamperMessage(consensusInstance,MessageType.APPEND, AppendMessage.class, new AppendMessage(value).toJson()));
+
+    System.out.println(serviceMessage.deserializeStartMessage().getValue().toString());
     this.link.broadcast(serviceMessage);
 
     frequency.clear();
@@ -88,6 +93,7 @@ public class ClientService {
     while (!decide.isDone()) {}
 
     if (decide.get() instanceof DecideMessage) {
+      this.consensusInstance++;
       return (DecideMessage) decide.get();
     } else {
       return null;

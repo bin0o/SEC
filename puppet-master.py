@@ -16,7 +16,7 @@ if platform.system() == "Darwin":
 
 # Blockchain node configuration file name
 server_configs = [
-    "test_2.json"
+    "test_client.json"
 ]
 
 server_config = server_configs[0]
@@ -42,9 +42,9 @@ with open(f"Configs/{server_config}") as f:
             except Exception as e:
                 pass
             os.chdir(key_dir)
-            os.system(f"openssl genrsa -out server.key")
+            #os.system(f"openssl genrsa -out server.key")
             os.chdir(f"..")
-            os.system(f"openssl rsa -pubout -in Node{key['id']}/server.key -out public{key['id']}.key")
+            #os.system(f"openssl rsa -pubout -in Node{key['id']}/server.key -out public{key['id']}.key")
             os.chdir(f"..")
             if not key['isClient']:
                 os.system(f"{terminal_run_path} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} ../Configs/{server_config}' ; sleep 500\"")
