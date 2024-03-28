@@ -81,10 +81,10 @@ public class NodeService implements UDPService {
   }
 
   private void initAccounts() {
-    for (ProcessConfig client : this.config.getClients()) {
+    for (ProcessConfig node : this.config.getNodesConfigs()) {
       this.accounts.put(
-          Base64.getEncoder().encodeToString(client.getPublicKey().getEncoded()),
-          new Account(client));
+          Base64.getEncoder().encodeToString(node.getPublicKey().getEncoded()),
+          new Account(node));
     }
   }
 
@@ -666,11 +666,16 @@ public class NodeService implements UDPService {
 
         ledger.add(consensusInstance - 1, value);
 
+        String currentPubKey =  Base64.getEncoder().encodeToString(this.current.getPublicKey().getEncoded());
+
         for (Transaction tx : value.getTransaction()) {
           float amountWithFee = tx.getAmount() + tx.getFee();
 
           this.accounts.get(tx.getSource()).updateBalance(-amountWithFee);
           this.accounts.get(tx.getDestination()).updateBalance(tx.getAmount());
+          if (config.isLeader(this.current.getId(), consensusInstance, round)) {
+            this.accounts.get(currentPubKey).updateBalance(tx.getFee());
+          }
         }
 
         LOGGER.log(
