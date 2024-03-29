@@ -1,15 +1,19 @@
 package pt.ulisboa.tecnico.hdsledger.common.models;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import pt.ulisboa.tecnico.hdsledger.common.MessageTampering;
+
 import java.security.PublicKey;
 import java.util.Base64;
 
-public class Transaction {
+public class Transaction implements MessageTampering {
 
-  private final String source;
+  private String source;
 
-  private final String destination;
+  private String destination;
 
-  private final Integer amount;
+  private Integer amount;
 
   private String signature;
 
@@ -53,6 +57,47 @@ public class Transaction {
 
   public String getSignature() {
     return String.valueOf(signature);
+  }
+
+  public void setSource(String source) {
+    this.source = source;
+  }
+
+  public void setDestination(String destination) {
+    this.destination = destination;
+  }
+
+  public void setAmount(Integer amount) {
+    this.amount = amount;
+  }
+
+  public void setSignature(String signature) {
+    this.signature = signature;
+  }
+
+  @Override
+  public String tamperJson(JsonElement tamperData) {
+    Gson gson = new Gson();
+
+    // Create copy
+    Transaction obj = gson.fromJson(gson.toJson(this), Transaction.class);
+
+    if (tamperData.getAsJsonObject().has("source"))
+      obj.setSource(tamperData.getAsJsonObject().get("source").getAsString());
+
+    if (tamperData.getAsJsonObject().has("destination"))
+      obj.setDestination(tamperData.getAsJsonObject().get("destination").getAsString());
+
+    if (tamperData.getAsJsonObject().has("amount"))
+      obj.setAmount(tamperData.getAsJsonObject().get("amount").getAsInt());
+
+    if (tamperData.getAsJsonObject().has("signature"))
+      obj.setSignature(tamperData.getAsJsonObject().get("signature").getAsString());
+
+    if (tamperData.getAsJsonObject().has("fee"))
+      obj.setFee(tamperData.getAsJsonObject().get("fee").getAsFloat());
+
+    return gson.toJson(obj);
   }
 
   @Override

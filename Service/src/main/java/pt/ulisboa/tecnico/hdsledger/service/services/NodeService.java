@@ -2,8 +2,6 @@ package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
 import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.text.MessageFormat;
 import java.util.*;
@@ -12,7 +10,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import pt.ulisboa.tecnico.hdsledger.service.models.Account;
 import pt.ulisboa.tecnico.hdsledger.common.models.Block;
 import pt.ulisboa.tecnico.hdsledger.common.models.Transaction;
@@ -54,7 +51,7 @@ public class NodeService implements UDPService {
   private List<String> clientsId;
 
   // Ledger (for now, just a list of strings)
-  private final ArrayList<Block> ledger = new ArrayList<Block>();
+  private final ArrayList<Block> ledger = new ArrayList<>();
 
   // private final Set<> receivedTransactions
 
@@ -83,39 +80,18 @@ public class NodeService implements UDPService {
   private void initAccounts() {
     for (ProcessConfig node : this.config.getNodesConfigs()) {
       this.accounts.put(
-          Base64.getEncoder().encodeToString(node.getPublicKey().getEncoded()),
-          new Account(node));
+          Base64.getEncoder().encodeToString(node.getPublicKey().getEncoded()), new Account(node));
     }
-  }
-
-  public GlobalConfig getConfig() {
-    return this.config;
-  }
-
-  public int getConsensusInstance() {
-    return this.consensusInstance.get();
-  }
-
-  public ArrayList<Block> getLedger() {
-    return this.ledger;
   }
 
   public ConsensusMessage createConsensusMessage(Block value, int instance, int round) {
     PrePrepareMessage prePrepareMessage = new PrePrepareMessage(value);
 
-    ConsensusMessage consensusMessage =
-        new ConsensusMessageBuilder(current.getId(), MessageType.PRE_PREPARE)
-            .setConsensusInstance(instance)
-            .setRound(round)
-            .setMessage(
-                config.tamperMessage(
-                    instance,
-                    MessageType.PRE_PREPARE,
-                    PrePrepareMessage.class,
-                    prePrepareMessage.toJson()))
-            .build();
-
-    return consensusMessage;
+    return new ConsensusMessageBuilder(current.getId(), MessageType.PRE_PREPARE)
+        .setConsensusInstance(instance)
+        .setRound(round)
+        .setMessage(config.tamperMessage(instance, MessageType.PRE_PREPARE, prePrepareMessage))
+        .build();
   }
 
   /*
@@ -243,15 +219,11 @@ public class NodeService implements UDPService {
 
       serviceMessage.setMessage(
           config.tamperMessage(
-              localConsensusInstance,
-              MessageType.DECIDE,
-              DecideMessage.class,
-              (new DecideMessage(false, -1, block)).toJson()));
+              localConsensusInstance, MessageType.DECIDE, new DecideMessage(false, -1, block)));
 
       this.link.send(message.getSenderId(), serviceMessage);
       return;
     }
-
 
     LOGGER.log(Level.INFO, MessageFormat.format("[APPEND] Transaction: {0}", tx));
     this.currentTransactions.add(tx);
@@ -416,11 +388,7 @@ public class NodeService implements UDPService {
             .setConsensusInstance(consensusInstance)
             .setRound(round)
             .setMessage(
-                config.tamperMessage(
-                    consensusInstance,
-                    MessageType.PREPARE,
-                    PrepareMessage.class,
-                    prepareMessage.toJson()))
+                config.tamperMessage(consensusInstance, MessageType.PREPARE, prepareMessage))
             .setReplyTo(senderId)
             .setReplyToMessageId(senderMessageId)
             .build();
@@ -479,10 +447,7 @@ public class NodeService implements UDPService {
               .setReplyToMessageId(message.getMessageId())
               .setMessage(
                   config.tamperMessage(
-                      consensusInstance,
-                      MessageType.COMMIT,
-                      CommitMessage.class,
-                      instance.getCommitMessage().toJson()))
+                      consensusInstance, MessageType.COMMIT, instance.getCommitMessage()))
               .build();
 
       if (config.dropMessage(consensusInstance, MessageType.COMMIT)) return;
@@ -512,9 +477,7 @@ public class NodeService implements UDPService {
               .setRound(round)
               .setReplyTo(senderId)
               .setReplyToMessageId(message.getMessageId())
-              .setMessage(
-                  config.tamperMessage(
-                      consensusInstance, MessageType.COMMIT, CommitMessage.class, c.toJson()))
+              .setMessage(config.tamperMessage(consensusInstance, MessageType.COMMIT, c))
               .build();
 
       LOGGER.log(Level.INFO, "SENT COMMIT MESSAGE");
@@ -667,7 +630,8 @@ public class NodeService implements UDPService {
 
         ledger.add(consensusInstance - 1, value);
 
-        String currentPubKey =  Base64.getEncoder().encodeToString(this.current.getPublicKey().getEncoded());
+        String currentPubKey =
+            Base64.getEncoder().encodeToString(this.current.getPublicKey().getEncoded());
 
         for (Transaction tx : value.getTransaction()) {
           float amountWithFee = tx.getAmount() + tx.getFee();
@@ -715,8 +679,7 @@ public class NodeService implements UDPService {
               config.tamperMessage(
                   consensusInstance,
                   MessageType.DECIDE,
-                  DecideMessage.class,
-                  (new DecideMessage(true, consensusInstance - 1, value)).toJson()));
+                  (new DecideMessage(true, consensusInstance - 1, value))));
           this.link.send(clientID, serviceMessage);
         }
       }
@@ -844,10 +807,7 @@ public class NodeService implements UDPService {
               .setRound(round)
               .setMessage(
                   config.tamperMessage(
-                      consensusInstance,
-                      MessageType.PRE_PREPARE,
-                      PrePrepareMessage.class,
-                      prePrepareMessage.toJson()))
+                      consensusInstance, MessageType.PRE_PREPARE, prePrepareMessage))
               .build();
 
       LOGGER.log(

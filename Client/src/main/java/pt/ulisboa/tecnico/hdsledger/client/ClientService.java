@@ -80,7 +80,8 @@ public class ClientService {
     ConsensusMessage serviceMessage =
         new ConsensusMessage(clientConfig.getId(), MessageType.APPEND);
 
-    serviceMessage.setMessage(this.config.tamperMessage(consensusInstance,MessageType.APPEND, AppendMessage.class, new AppendMessage(value).toJson()));
+    serviceMessage.setMessage(
+        this.config.tamperMessage(consensusInstance, MessageType.APPEND, new AppendMessage(value)));
 
     System.out.println(serviceMessage.deserializeStartMessage().getValue().toString());
     this.link.broadcast(serviceMessage);

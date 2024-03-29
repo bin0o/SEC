@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.common;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import pt.ulisboa.tecnico.hdsledger.common.tests.State;
 import pt.ulisboa.tecnico.hdsledger.common.tests.TestConfig;
@@ -122,19 +123,16 @@ public class GlobalConfig {
     return drop;
   }
 
-  public String tamperMessage(
-      Integer instance, MessageType type, Class classOfT, String inputData) {
+  public String tamperMessage(Integer instance, MessageType type, MessageTampering obj) {
     Optional<State> testState = getTestState(instance);
 
-    if (testState.isEmpty()) return inputData;
+    if (testState.isEmpty()) return obj.tamperJson(new JsonObject());
 
     JsonElement tamperedObject = testState.get().getTAMPER().get(type);
 
-    if (tamperedObject == null) return inputData;
+    if (tamperedObject == null) return obj.tamperJson(new JsonObject());
 
-    Gson gson = new Gson();
-
-    String tamperedString = gson.toJson(gson.fromJson(tamperedObject, classOfT));
+    String tamperedString = obj.tamperJson(tamperedObject);
 
     LOGGER.log(
         Level.INFO,
