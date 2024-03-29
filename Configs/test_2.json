@@ -1,7 +1,7 @@
 {
   "roundTime": 10000,
   "timerInterval": 500,
-  "keysLocation": "/home/bino/Desktop/MEIC/SEC/Proj/sec2324-project-base/HDSLedger/Keys",
+  "keysLocation": "/Users/goncalosilva/Documents/MEIC/SEC/SEC/Keys",
   "nodes": [
     {
       "id": "1",
@@ -63,7 +63,13 @@
       {
         "id": "1",
         "state": {
-          "DROP": ["PRE_PREPARE","PREPARE","COMMIT", "DECIDE", "ROUND_CHANGE"],
+          "DROP": [
+            "PRE_PREPARE",
+            "PREPARE",
+            "COMMIT",
+            "DECIDE",
+            "ROUND_CHANGE"
+          ],
           "TAMPER": {}
         }
       },
@@ -74,7 +80,6 @@
           "TAMPER": {
             "PRE_PREPARE": {
               "value": "tamper_value",
-              "signature": "",
               "justification": []
             },
             "PREPARE": {
