@@ -250,7 +250,7 @@ public class NodeService implements UDPService {
     Integer amount = tx.getAmount();
     float fee = tx.getFee();
 
-    return accounts.get(tx.getSource()).getBalance() >= amount + fee
+    return fee == computeFee(amount) && accounts.get(tx.getSource()).getBalance() >= amount + fee
         && verifyTransactionSignature(tx);
   }
 

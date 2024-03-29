@@ -111,6 +111,8 @@ public class Transaction implements MessageTampering {
         + amount
         + ", sourceSignature="
         + signature
-        + '}';
+        + ", fee"
+        + fee
+        +   '}';
   }
 }

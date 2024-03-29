@@ -1,7 +1,7 @@
 {
   "roundTime": 10000,
   "timerInterval": 500,
-  "keysLocation": "/Users/goncalosilva/Documents/MEIC/SEC/SEC/Keys",
+  "keysLocation": "/home/bino/Desktop/MEIC/SEC/Proj/sec2324-project-base/HDSLedger/Keys",
   "nodes": [
     {
       "id": "1",
@@ -79,11 +79,26 @@
           "DROP": [],
           "TAMPER": {
             "PRE_PREPARE": {
-              "value": "tamper_value",
-              "justification": []
+              "value": {
+                "block" : {
+                  "transaction" : [
+                    {
+                      "fee": 50
+                    }
+                  ]
+                }
+              }
             },
             "PREPARE": {
-              "value": "tamper_value"
+              "value": {
+                "block" : {
+                  "transaction" : [
+                    {
+                      "fee": 50
+                    }
+                  ]
+                }
+              }
             }
           }
         }

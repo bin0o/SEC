@@ -28,41 +28,37 @@
       "port": 3004
     },
     {
-      "id": "5",
-      "isClient": false,
-      "hostname": "localhost",
-      "port": 3005
-    },
-    {
       "id": "client1",
       "isClient": true,
       "hostname": "localhost",
-      "port": 3006
+      "port": 3008
     },
     {
       "id": "client2",
       "isClient": true,
       "hostname": "localhost",
-      "port": 3007
+      "port": 3009
     }
   ],
   "tests": [
-    [],
     [
       {
         "id": "1",
         "state": {
-          "DROP": [
-            "PRE_PREPARE",
-            "PREPARE",
-            "COMMIT",
-            "DECIDE",
-            "ROUND_CHANGE"
-          ],
-          "TAMPER": {}
+          "DROP": [],
+          "TAMPER": {
+            "PRE_PREPARE": {
+                "block" : {
+                  "transaction" : [
+                    {
+                      "fee": 50.0
+                    }
+                  ]
+                }
+            }
+          }
         }
       }
-    ],
-    []
+    ]
   ]
 }

@@ -56,8 +56,7 @@ public class PrePrepareMessage implements MessageTampering {
     PrePrepareMessage obj = gson.fromJson(this.toJson(), PrePrepareMessage.class);
 
     if (tamperData.getAsJsonObject().has("block")) {
-      Block block = gson.fromJson(tamperData.getAsJsonObject().get("block"), Block.class);
-      obj.setBlock(block);
+      obj.setBlock(gson.fromJson(this.getBlock().tamperJson(tamperData.getAsJsonObject().get("block")), Block.class));
     }
 
     if (tamperData.getAsJsonObject().has("justification")) {
