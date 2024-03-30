@@ -56,8 +56,7 @@
             "PRE_PREPARE",
             "PREPARE",
             "COMMIT",
-            "DECIDE",
-            "ROUND_CHANGE"
+            "DECIDE"
           ],
           "TAMPER": {}
         }
