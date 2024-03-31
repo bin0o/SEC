@@ -225,6 +225,12 @@ public class NodeService implements UDPService {
       return;
     }
 
+    boolean removed = invalidTransactionsSignatures.remove(tx.getSignature());
+
+    if (removed) {
+      LOGGER.log(Level.INFO,"[APPEND] Transaction Signature removed");
+    }
+
     LOGGER.log(Level.INFO, MessageFormat.format("[APPEND] Transaction: {0}", tx));
     this.currentTransactions.add(tx);
     this.currentClients.add(message.getSenderId());
@@ -250,7 +256,7 @@ public class NodeService implements UDPService {
     Integer amount = tx.getAmount();
     float fee = tx.getFee();
 
-    return fee == computeFee(amount) && accounts.get(tx.getSource()).getBalance() >= amount + fee
+    return accounts.get(tx.getSource()).getBalance() >= amount + fee
         && verifyTransactionSignature(tx);
   }
 
@@ -268,6 +274,7 @@ public class NodeService implements UDPService {
     LOGGER.log(Level.INFO, MessageFormat.format("Validating Block: {0}", block.getHash()));
 
     for (Transaction tx : block.getTransaction()) {
+      int index = block.getTransaction().indexOf(tx);
 
       // TODO: Maybe better to do White List, and then we check if the signature is there?
       // You're totally right! If we use a whitelist we only need to track all the valid signatures!
@@ -282,7 +289,7 @@ public class NodeService implements UDPService {
 
       LOGGER.log(Level.INFO, MessageFormat.format("- Validating TX: {0}", tx));
 
-      if (invalidTransactionsSignatures.contains(tx.getSignature()) || !isValidTransaction(tx)) {
+      if (invalidTransactionsSignatures.contains(tx.getSignature()) || !isValidTransaction(tx) || this.inputValue.getTransaction().get(index).getFee() != tx.getFee()) {
         return false;
       }
     }

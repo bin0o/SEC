@@ -79,25 +79,12 @@
           "DROP": [],
           "TAMPER": {
             "PRE_PREPARE": {
-              "value": {
-                "block" : {
-                  "transaction" : [
-                    {
-                      "fee": 50
-                    }
-                  ]
-                }
-              }
-            },
-            "PREPARE": {
-              "value": {
-                "block" : {
-                  "transaction" : [
-                    {
-                      "fee": 50
-                    }
-                  ]
-                }
+              "block" : {
+                "transaction" : [
+                  {
+                    "fee": 50.0
+                  }
+                ]
               }
             }
           }

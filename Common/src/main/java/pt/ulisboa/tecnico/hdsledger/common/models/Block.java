@@ -80,7 +80,7 @@ public class Block implements MessageTampering {
       for (Transaction tx : this.getTransaction()){
         int index = this.getTransaction().indexOf(tx);
         // Perform tampering operation on each transaction
-        String tamperedJson = tx.tamperJson(transactionArray.get(index));
+        String tamperedJson = tx.tamperJson(transactionArray.get(0));
 
         Transaction tamperedTransaction = gson.fromJson(tamperedJson, Transaction.class);
 
