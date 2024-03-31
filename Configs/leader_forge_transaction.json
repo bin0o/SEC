@@ -1,0 +1,64 @@
+{
+  "roundTime": 10000,
+  "timerInterval": 500,
+  "keysLocation": "/home/bino/Desktop/MEIC/SEC/Proj/sec2324-project-base/HDSLedger/Keys",
+  "nodes": [
+    {
+      "id": "1",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3001
+    },
+    {
+      "id": "2",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3002
+    },
+    {
+      "id": "3",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3003
+    },
+    {
+      "id": "4",
+      "isClient": false,
+      "hostname": "localhost",
+      "port": 3004
+    },
+    {
+      "id": "client1",
+      "isClient": true,
+      "hostname": "localhost",
+      "port": 3008
+    },
+    {
+      "id": "client2",
+      "isClient": true,
+      "hostname": "localhost",
+      "port": 3009
+    }
+  ],
+  "tests": [
+    [
+      {
+        "id": "1",
+        "state": {
+          "DROP": [],
+          "TAMPER": {
+            "PRE_PREPARE": {
+              "block" : {
+                "transaction" : [
+                  {
+                    "destination": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs9qZrW5qhpMr1eH+kNkgpAVDyRXco57wU9uMAglH0dC+Txeg0oP3fQ9upe3URmAHBAX8bFQPQfiZ21SVRAkgnrDI/WwEggYcD8h5F7SPtEwIsar5zTy/YEdM23xmKWTeqNI/znDK5uroJ8IFltQxlIeGoMIep1Zs50f+LECHlSaUfImGF9nd4usm/00MxyoBrRQH/qdUFvQSDrxtpTZ9liCPAO7ggromxDewMqYdLDUVdv8s4lqKCQr2CBdL3l6qmKVEGBz1EwDBGErCQussgRzQpEeAf6ZKC3Joheb9SNmKs65oicX5H8t2SnnfrbwB4Ih1PuZrfWilYcwFcahkuwIDAQAB"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    ]
+  ]
+}

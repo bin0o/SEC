@@ -37,34 +37,6 @@ public class Client {
     ClientService clientService = new ClientService(config, linkToNodes);
 
     if (testMode) {
-
-      /* // Parse ledgers
-      List<String> ledgers = Arrays.stream(args[3].split(",")).toList();
-
-      int instances = config.getTestsConfigs().length;
-
-      if (ledgers.size() != instances) {
-          LOGGER.log(Level.INFO, "[Test Mode]: Error: Ledgers size and instances don't match");
-          System.exit(1);
-      }
-
-      LOGGER.log(Level.INFO, MessageFormat.format("[Test Mode]: Sending payloads for {0} instances", instances));
-
-      for(String ledger : ledgers) {
-          LOGGER.log(Level.INFO, MessageFormat.format("[Test Mode]: Sending ledger -> {0}", ledger));
-
-          DecideMessage response = clientService.append(ledger);
-
-          if (!response.getConfirmation()) {
-              LOGGER.log(Level.INFO, MessageFormat.format("[Test Mode]: ({0}) FAIL: {1}", ledger, response.toString()));
-              System.exit(1);
-          } else {
-              LOGGER.log(Level.INFO, MessageFormat.format("[Test Mode]: ({0}) OK", ledger));
-          }
-
-          Thread.sleep(1000);
-      }*/
-
       System.exit(0);
     } else {
       Scanner sc = new Scanner(System.in);

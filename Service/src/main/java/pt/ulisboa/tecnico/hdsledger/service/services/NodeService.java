@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 public class NodeService implements UDPService {
 
-  private static final Integer BLOCK_SIZE = 1;
+  private static final Integer BLOCK_SIZE = 2;
 
   private static final CustomLogger LOGGER = new CustomLogger(NodeService.class.getName());
 
@@ -50,7 +50,7 @@ public class NodeService implements UDPService {
 
   private List<String> clientsId;
 
-  // Ledger (for now, just a list of strings)
+  // Blockchain
   private final ArrayList<Block> ledger = new ArrayList<>();
 
   // private final Set<> receivedTransactions
@@ -861,6 +861,10 @@ public class NodeService implements UDPService {
         Base64.getEncoder()
             .encodeToString(
                 this.config.getNodeConfig(message.getSenderId()).getPublicKey().getEncoded());
+    int consensusInstance = message.getConsensusInstance();
+    if (consensusInstance == 0) {
+      consensusInstance++;
+    }
 
     float balance = this.accounts.get(clientPublicKey).getBalance();
     // TODO: Tamper was not working, so I removed it
@@ -868,7 +872,8 @@ public class NodeService implements UDPService {
     ConsensusMessage serviceMessage =
         new ConsensusMessage(current.getId(), MessageType.CHECK_BALANCE);
     BalanceReply balanceMsg = new BalanceReply(balance);
-    serviceMessage.setMessage(balanceMsg.toJson());
+    serviceMessage.setMessage(config.tamperMessage(
+            consensusInstance, MessageType.CHECK_BALANCE, balanceMsg));
     link.send(message.getSenderId(), serviceMessage);
   }
 

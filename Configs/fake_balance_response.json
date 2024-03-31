@@ -49,15 +49,12 @@
   "tests": [
     [
       {
-        "id": "client1",
+        "id": "1",
         "state": {
           "DROP": [],
           "TAMPER": {
-            "APPEND": {
-              "value": {
-                "source": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsxyGj2xa9GvB8XmmhpJG4bAP7NGV11A2Y45/d/krO/7DXyaHyGrahJ9tFsW6rREdA32SBIzeonQAyc+rhLhVyvxfyTOVOIkkodAZizDuWJe9J/C0VWtkzN+O5Las9s+6Yq3xTJijtBJtC0OhA3nBpS0Ikl0icBUt5FtfjFQOTrnuOnUHPIlAYz0LiMJS0DAqbfuZkdryF7EHtx/GaqHojPHbaEiZoS4Yw9K9MgZ4h54WHfiFkC1h7J4Upf2NYP5+Tr7MJpM2PmOYNm1C+QVB0ugLhv9k0Ksfy/TSqp1zM58UVz8D4AHgwXhdJgu2OO8TLcEtU/MZb4nbGReriIXF4wIDAQAB",
-                "destination": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtnOm8NtqVIc9J+i3Ngsf/aUKGjMmikVlOHA2HNioYJ3Ze31rHNwyFG/oqPXZeIKYX/Tdee8ff2z1ESho68mfCIeZd//VIOfdxd1SIOfQkZmPrPwydQ7zGUfwgeSQ1LbV/UAyYxzwdpL7ZtFOx3eXpNQt0Bug1EyZ7uNuG8eqw9EHGA7w92gwtZS5gwHjBPkyl6d/SrWA8HX8Vp1JqzQUsfH9/9l61jjai2Zj3HYHf60C1jHvq8lYjqt9fnB6Gv5Jnb8UMmFUfiNiiaMfWDvc96pThULJxfEjWSMLhEETlXoSsC49m2X+3G9HsAvBBXKzB1Lp0cNvMNpkZCo9VILmCQIDAQAB"
-              }
+            "CHECK_BALANCE": {
+              "value": 1
             }
           }
         }
