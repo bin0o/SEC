@@ -46,6 +46,8 @@ mvn exec:java -Dexec.args="client1 ../Configs/regular_config.json false"
 ## Testing
 Integration tests can be run with the command below. 
 Be in mind that these tests can take a lot of time to complete and sometimes can give false positives, in case of doubt test manually. The configuration file tests are designed to change nodes behavior according to the current instance.
+
+**NOTE: To test any of the config, you'll need to run with 2 clients terminals, since the Block size is equal to 2 Transactions.**
 ```
 python3 tests.py
 ```
